@@ -3,26 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>도형 기반 방 꾸미기 에디터 (Pro)</title>
+    <title>도형 기반 방 꾸미기 에디터 (레이어 강화)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
-        body {
-            font-family: 'Malgun Gothic', sans-serif;
-            margin: 0; padding: 20px; background-color: #f4f7f6; color: #333;
-        }
-        h1 { text-align: center; margin-bottom: 10px; }
+        body { font-family: 'Malgun Gothic', sans-serif; margin: 0; padding: 20px; background-color: #f4f7f6; color: #333; }
+        h1 { text-align: center; margin-bottom: 5px; }
+        .subtitle { text-align: center; color: #666; margin-bottom: 20px; font-size: 14px; }
         
-        .toolbar { display: flex; justify-content: center; gap: 15px; margin-bottom: 20px; }
+        .toolbar { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
         button {
-            padding: 8px 16px; border: none; border-radius: 6px;
+            padding: 8px 14px; border: none; border-radius: 6px;
             background-color: #4CAF50; color: white; cursor: pointer;
-            font-weight: bold; transition: 0.2s;
+            font-weight: bold; transition: 0.2s; font-size: 13px;
         }
         button:hover { background-color: #45a049; }
         .btn-outline { background-color: white; color: #4CAF50; border: 2px solid #4CAF50; }
         .btn-outline:hover { background-color: #e8f5e9; }
         .btn-danger { background-color: #f44336; }
         .btn-danger:hover { background-color: #d32f2f; }
+        .btn-primary { background-color: #2196F3; }
+        .btn-primary:hover { background-color: #1976D2; }
 
         .container { display: flex; justify-content: center; gap: 20px; align-items: flex-start; }
 
@@ -30,11 +30,17 @@
             width: 180px; background: white; padding: 15px; border-radius: 10px;
             box-shadow: 0 4px 8px rgba(0,0,0,0.1); user-select: none;
         }
-        .shape-group-title { font-size: 14px; color: #666; margin-top: 15px; margin-bottom: 5px; }
+        .layer-box { margin-bottom: 15px; padding: 10px; background: #e3f2fd; border-radius: 5px; border: 1px solid #bbdefb; }
+        .layer-box label { display: block; font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #1565c0; }
+        .layer-box select { width: 100%; padding: 5px; border-radius: 4px; border: 1px solid #90caf9; }
+        
+        .tip { font-size: 12px; color: #d32f2f; font-weight: bold; margin-bottom: 10px; text-align: center; }
+
+        .shape-group-title { font-size: 14px; color: #666; margin-top: 15px; margin-bottom: 5px; border-bottom: 1px solid #eee; padding-bottom: 3px; }
         .shape-btn {
-            display: block; width: 100%; padding: 10px; margin-bottom: 8px;
+            display: block; width: 100%; padding: 8px; margin-bottom: 5px;
             background: #e0e0e0; border: 2px solid transparent; border-radius: 5px;
-            cursor: pointer; text-align: center; font-weight: bold;
+            cursor: pointer; text-align: center; font-weight: bold; font-size: 13px;
         }
         .shape-btn.selected { border-color: #ff9800; background: #fff3e0; color: #ff9800; }
 
@@ -49,70 +55,84 @@
             background-size: 20px 20px; border: 1px solid #ccc; cursor: crosshair;
         }
 
+        /* transition 추가로 투명도 변화가 부드럽게 일어나도록 설정 */
         .block {
             position: absolute; box-sizing: border-box;
             border: 2px solid #333; background-color: #cccccc; cursor: grab;
+            transition: box-shadow 0.2s, opacity 0.3s;
         }
-        .block:active { cursor: grabbing; }
+        .block:active { cursor: grabbing; box-shadow: 2px 2px 5px rgba(0,0,0,0.3); }
 
         #preview {
             position: absolute; border: 2px dashed #ff9800; background: rgba(255, 152, 0, 0.3);
-            pointer-events: none; display: none; z-index: 10;
+            pointer-events: none; display: none; z-index: 999; transition: background-color 0.1s, border-color 0.1s;
         }
 
-        /* 합쳐진 그룹 위에 띄울 이름 라벨 컨테이너 */
         #labels-container {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; z-index: 20;
+            pointer-events: none; z-index: 1000;
         }
         .group-label {
             position: absolute; transform: translate(-50%, -50%);
             font-size: 13px; font-weight: bold; text-align: center;
-            /* 글씨가 잘 보이도록 하얀색 테두리 효과 추가 */
             text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff; 
             color: #333; pointer-events: none; white-space: nowrap;
+            transition: opacity 0.3s;
         }
 
         #edit-modal {
             display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: white; padding: 20px; border-radius: 10px; z-index: 1000;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3); width: 250px;
+            background: white; padding: 20px; border-radius: 10px; z-index: 2000;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3); width: 260px;
         }
         .modal-overlay {
             display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.5); z-index: 999;
+            background: rgba(0,0,0,0.5); z-index: 1999;
         }
-        .modal-row { margin-bottom: 15px; }
-        .modal-row label { display: block; margin-bottom: 5px; font-weight: bold; }
-        .modal-row input[type="text"] { width: 100%; padding: 8px; box-sizing: border-box; }
-        .modal-row input[type="color"] { width: 100%; height: 40px; cursor: pointer; border: none; }
-        .modal-actions { display: flex; justify-content: space-between; margin-top: 20px; }
+        .modal-row { margin-bottom: 12px; }
+        .modal-row label { display: block; margin-bottom: 4px; font-weight: bold; font-size: 13px; }
+        .modal-row input[type="text"], .modal-row select { width: 100%; padding: 8px; box-sizing: border-box; border-radius: 4px; border: 1px solid #ccc; }
+        .modal-row input[type="color"] { width: 100%; height: 35px; cursor: pointer; border: none; }
+        .modal-actions { display: flex; justify-content: space-between; margin-top: 15px; }
     </style>
 </head>
 <body>
 
-    <h1>🛋️ 나만의 방 꾸미기 (드래그 & 자동병합)</h1>
+    <h1>🛋️ 나만의 방 꾸미기 (레이어 강화판)</h1>
+    <div class="subtitle">작업 중인 레이어(층)만 선명하게 보입니다. 이미지 저장 시엔 모두 선명해집니다!</div>
     
     <div class="toolbar">
         <button class="btn-outline" onclick="setRoomSize(40, 30)">가로형 (40x30)</button>
         <button class="btn-outline" onclick="setRoomSize(30, 40)">세로형 (30x40)</button>
-        <button onclick="exportToImage()">📸 이미지로 저장</button>
-        <button class="btn-danger" onclick="clearRoom()">🗑️ 모두 지우기</button>
+        <button class="btn-primary" onclick="saveRoom()">💾 임시저장</button>
+        <button class="btn-primary" onclick="loadRoom()">📂 불러오기</button>
+        <button onclick="exportToImage()">📸 캡처 저장</button>
+        <button class="btn-danger" onclick="clearRoom()">🗑️ 지우기</button>
     </div>
 
     <div class="container">
         <div class="sidebar" id="palette">
+            <div class="tip">💡 우클릭 또는 'R'로 회전</div>
+            
+            <div class="layer-box">
+                <label>현재 작업 레이어</label>
+                <select id="current-layer-select">
+                    <option value="1">1층: 바닥재 (카펫 등)</option>
+                    <option value="2" selected>2층: 일반 가구</option>
+                    <option value="3">3층: 소품 (화분 등)</option>
+                </select>
+            </div>
+
             <div class="shape-group-title">정사각형</div>
             <div class="shape-btn selected" data-w="1" data-h="1">1 × 1</div>
             <div class="shape-btn" data-w="2" data-h="2">2 × 2</div>
             <div class="shape-btn" data-w="3" data-h="3">3 × 3</div>
             <div class="shape-btn" data-w="4" data-h="4">4 × 4</div>
             
-            <div class="shape-group-title">가로/세로</div>
+            <div class="shape-group-title">직사각형 (가로/세로)</div>
             <div class="shape-btn" data-w="2" data-h="1">2 × 1</div>
             <div class="shape-btn" data-w="3" data-h="1">3 × 1</div>
-            <div class="shape-btn" data-w="1" data-h="2">1 × 2</div>
-            <div class="shape-btn" data-w="1" data-h="3">1 × 3</div>
+            <div class="shape-btn" data-w="4" data-h="1">4 × 1</div>
         </div>
 
         <div id="workspace">
@@ -125,8 +145,7 @@
 
     <div class="modal-overlay" id="modal-overlay"></div>
     <div id="edit-modal">
-        <h3 style="margin-top: 0;">가구 속성 편집</h3>
-        <p style="font-size: 12px; color: #666; margin-top: -10px;">같은 이름을 입력하면 색상이 자동 동기화됩니다.</p>
+        <h3 style="margin-top: 0; margin-bottom: 10px;">가구 속성 편집</h3>
         <div class="modal-row">
             <label>이름 입력:</label>
             <input type="text" id="edit-name" placeholder="예: 소파, 책상">
@@ -134,6 +153,14 @@
         <div class="modal-row">
             <label>색상 선택:</label>
             <input type="color" id="edit-color" value="#cccccc">
+        </div>
+        <div class="modal-row">
+            <label>레이어 변경:</label>
+            <select id="edit-layer">
+                <option value="1">1층: 바닥재</option>
+                <option value="2">2층: 일반 가구</option>
+                <option value="3">3층: 소품</option>
+            </select>
         </div>
         <div class="modal-actions">
             <button class="btn-danger" id="btn-delete">삭제</button>
@@ -147,18 +174,44 @@
         const preview = document.getElementById('preview');
         const labelsContainer = document.getElementById('labels-container');
         const shapeBtns = document.querySelectorAll('.shape-btn');
+        const currentLayerSelect = document.getElementById('current-layer-select');
         const CELL_SIZE = 20; 
         
         let currentW = 1; let currentH = 1;
         let gridCols = 40; let gridRows = 30;
         
-        // 드래그 및 편집 상태 변수
-        let isDragging = false;
-        let hasMoved = false;
-        let dragGroup = [];
-        let initialPos = [];
+        let isDragging = false; let hasMoved = false;
+        let dragGroup = []; let initialPos = [];
         let startX = 0; let startY = 0;
         let editingGroup = [];
+
+        // ⭐ 레이어 시각화 업데이트 함수 (현재 레이어만 뚜렷하게)
+        function updateLayerVisibility() {
+            const activeLayer = currentLayerSelect.value;
+            const blocks = document.querySelectorAll('.block');
+            const labels = document.querySelectorAll('.group-label');
+
+            blocks.forEach(b => {
+                if (b.dataset.layer === activeLayer) {
+                    b.style.opacity = '1';
+                    b.style.pointerEvents = 'auto'; // 클릭 허용
+                } else {
+                    b.style.opacity = '0.4'; // 다른 층은 반투명하게
+                    b.style.pointerEvents = 'none'; // 클릭 무시 (아래 층 클릭 방지)
+                }
+            });
+
+            labels.forEach(l => {
+                if (l.dataset.layer === activeLayer) {
+                    l.style.opacity = '1';
+                } else {
+                    l.style.opacity = '0.4';
+                }
+            });
+        }
+
+        // 레이어 선택 상자 변경 시 시각화 업데이트
+        currentLayerSelect.addEventListener('change', updateLayerVisibility);
 
         function setRoomSize(cols, rows) {
             gridCols = cols; gridRows = rows;
@@ -174,33 +227,75 @@
                 e.target.classList.add('selected');
                 currentW = parseInt(e.target.dataset.w);
                 currentH = parseInt(e.target.dataset.h);
-                preview.style.width = (currentW * CELL_SIZE) + 'px';
-                preview.style.height = (currentH * CELL_SIZE) + 'px';
+                updatePreviewSize();
             });
         });
 
-        // 빈 공간 미리보기 및 클릭 배치
+        function rotateShape() {
+            const temp = currentW;
+            currentW = currentH;
+            currentH = temp;
+            updatePreviewSize();
+        }
+        function updatePreviewSize() {
+            preview.style.width = (currentW * CELL_SIZE) + 'px';
+            preview.style.height = (currentH * CELL_SIZE) + 'px';
+        }
+        window.addEventListener('keydown', (e) => { if(e.key.toLowerCase() === 'r') rotateShape(); });
+        grid.addEventListener('contextmenu', (e) => { e.preventDefault(); rotateShape(); });
+
+        function checkCollision(targetX, targetY, targetW, targetH, targetLayer, ignoreBlocks = []) {
+            const blocks = Array.from(document.querySelectorAll('.block'));
+            for (let b of blocks) {
+                if (ignoreBlocks.includes(b)) continue;
+                if (parseInt(b.dataset.layer) !== parseInt(targetLayer)) continue; 
+
+                const bX = parseInt(b.style.left), bY = parseInt(b.style.top);
+                const bW = parseInt(b.style.width), bH = parseInt(b.style.height);
+
+                if (targetX < bX + bW && targetX + targetW > bX && targetY < bY + bH && targetY + targetH > bY) {
+                    return true; 
+                }
+            }
+            return false;
+        }
+
         grid.addEventListener('mousemove', (e) => {
             if (isDragging) return;
-            if (e.target !== grid) return; 
-            const x = Math.floor(e.offsetX / CELL_SIZE) * CELL_SIZE;
-            const y = Math.floor(e.offsetY / CELL_SIZE) * CELL_SIZE;
+            if (e.target !== grid && !e.target.classList.contains('block')) return; 
+            
+            const rect = grid.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
 
-            if (x + (currentW * CELL_SIZE) > gridCols * CELL_SIZE || 
-                y + (currentH * CELL_SIZE) > gridRows * CELL_SIZE) {
+            const x = Math.floor(mouseX / CELL_SIZE) * CELL_SIZE;
+            const y = Math.floor(mouseY / CELL_SIZE) * CELL_SIZE;
+            const layer = currentLayerSelect.value;
+
+            if (x < 0 || y < 0 || x + (currentW * CELL_SIZE) > gridCols * CELL_SIZE || y + (currentH * CELL_SIZE) > gridRows * CELL_SIZE) {
                 preview.style.display = 'none';
             } else {
                 preview.style.display = 'block';
                 preview.style.left = x + 'px';
                 preview.style.top = y + 'px';
+
+                if (checkCollision(x, y, currentW * CELL_SIZE, currentH * CELL_SIZE, layer)) {
+                    preview.style.borderColor = 'red';
+                    preview.style.backgroundColor = 'rgba(255, 0, 0, 0.4)';
+                    preview.dataset.valid = 'false';
+                } else {
+                    preview.style.borderColor = '#ff9800';
+                    preview.style.backgroundColor = 'rgba(255, 152, 0, 0.3)';
+                    preview.dataset.valid = 'true';
+                }
             }
         });
 
         grid.addEventListener('mouseleave', () => { preview.style.display = 'none'; });
 
         grid.addEventListener('click', (e) => {
-            if (hasMoved) { hasMoved = false; return; } // 드래그 끝난 직후 클릭 방지
-            if (e.target !== grid || preview.style.display === 'none') return; 
+            if (hasMoved) { hasMoved = false; return; } 
+            if (preview.style.display === 'none' || preview.dataset.valid === 'false') return; 
 
             const block = document.createElement('div');
             block.classList.add('block');
@@ -211,29 +306,30 @@
             block.style.backgroundColor = '#cccccc';
             block.dataset.name = '';
             block.dataset.color = '#cccccc';
+            
+            const layer = currentLayerSelect.value;
+            block.dataset.layer = layer;
+            block.style.zIndex = layer * 10;
 
             grid.appendChild(block);
-            openModal([block]); // 생성 직후 모달 열기
+            updateLayerVisibility(); // 배치 후 투명도 업데이트
+            openModal([block]); 
+            preview.style.display = 'none';
         });
 
-        // ======= 마우스 드래그 앤 드롭 이동 =======
         grid.addEventListener('mousedown', (e) => {
-            if (e.button !== 0) return; // 좌클릭만 허용
+            if (e.button !== 0) return; 
             const block = e.target.closest('.block');
-            if (!block) return;
+            if (!block || block.style.pointerEvents === 'none') return; // 비활성 레이어는 잡히지 않음
 
-            isDragging = true;
-            hasMoved = false;
-            startX = e.clientX;
-            startY = e.clientY;
-            preview.style.display = 'none'; // 드래그 시 미리보기 숨김
+            isDragging = true; hasMoved = false;
+            startX = e.clientX; startY = e.clientY;
+            preview.style.display = 'none'; 
 
-            // 연결된 전체 그룹 찾기
             const blocks = Array.from(document.querySelectorAll('.block'));
             const clusters = getClusters(blocks);
             dragGroup = clusters.find(c => c.includes(block)) || [block];
 
-            // 시작 위치 기록
             initialPos = dragGroup.map(b => ({
                 el: b, left: parseInt(b.style.left), top: parseInt(b.style.top)
             }));
@@ -250,7 +346,6 @@
                 const snapDx = Math.round(dx / CELL_SIZE) * CELL_SIZE;
                 const snapDy = Math.round(dy / CELL_SIZE) * CELL_SIZE;
 
-                // 그룹 중 하나라도 격자 밖으로 나가면 이동 차단
                 let canMove = true;
                 for (let i = 0; i < dragGroup.length; i++) {
                     const init = initialPos[i];
@@ -258,7 +353,12 @@
                     const ny = init.top + snapDy;
                     const w = parseInt(dragGroup[i].style.width);
                     const h = parseInt(dragGroup[i].style.height);
+                    const layer = dragGroup[i].dataset.layer;
+
                     if (nx < 0 || ny < 0 || nx + w > gridCols * CELL_SIZE || ny + h > gridRows * CELL_SIZE) {
+                        canMove = false; break;
+                    }
+                    if (checkCollision(nx, ny, w, h, layer, dragGroup)) {
                         canMove = false; break;
                     }
                 }
@@ -275,58 +375,62 @@
         window.addEventListener('mouseup', (e) => {
             if (!isDragging) return;
             isDragging = false;
-
-            if (hasMoved) {
-                // 드래그가 끝났을 때 다시 병합 및 라벨 계산
-                updateMergesAndLabels();
-            } else {
-                // 제자리에서 클릭한 경우 편집 모달 열기
+            if (hasMoved) { updateMergesAndLabels(); } 
+            else {
                 const block = e.target.closest('.block');
                 if (block) {
                     const blocks = Array.from(document.querySelectorAll('.block'));
                     const clusters = getClusters(blocks);
-                    const group = clusters.find(c => c.includes(block)) || [block];
-                    openModal(group);
+                    openModal(clusters.find(c => c.includes(block)) || [block]);
                 }
             }
         });
 
-        // ======= 속성 편집 모달 =======
         const modal = document.getElementById('edit-modal');
         const overlay = document.getElementById('modal-overlay');
         const nameInput = document.getElementById('edit-name');
         const colorInput = document.getElementById('edit-color');
-        const btnDelete = document.getElementById('btn-delete');
+        const layerEditInput = document.getElementById('edit-layer');
 
         function openModal(group) {
             editingGroup = group;
-            const repBlock = group[0]; // 대표 블록
-            nameInput.value = repBlock.dataset.name || '';
-            colorInput.value = repBlock.dataset.color || '#cccccc';
+            const rep = group[0]; 
+            nameInput.value = rep.dataset.name || '';
+            colorInput.value = rep.dataset.color || '#cccccc';
+            layerEditInput.value = rep.dataset.layer || "2";
             modal.style.display = 'block'; overlay.style.display = 'block';
             nameInput.focus();
         }
 
-        function closeModal() {
-            modal.style.display = 'none'; overlay.style.display = 'none';
-            editingGroup = [];
-        }
+        function closeModal() { modal.style.display = 'none'; overlay.style.display = 'none'; editingGroup = []; }
 
-        // ⭐ 이름 입력 시 기존 같은 이름의 색상을 자동으로 불러오는 기능
         nameInput.addEventListener('input', (e) => {
             const typed = e.target.value.trim();
             if (typed) {
                 const allBlocks = Array.from(document.querySelectorAll('.block'));
-                // 현재 편집중인 그룹이 아니면서 이름이 같은 블록 탐색
                 const match = allBlocks.find(b => b.dataset.name === typed && !editingGroup.includes(b));
-                if (match) {
-                    colorInput.value = match.dataset.color; // 색상 자동 동기화
-                }
+                if (match) colorInput.value = match.dataset.color; 
             }
         });
 
         function saveEdit() {
             if (editingGroup.length > 0) {
+                let layerConflict = false;
+                const newLayer = layerEditInput.value;
+                
+                if (editingGroup[0].dataset.layer !== newLayer) {
+                    for(let b of editingGroup) {
+                        const x = parseInt(b.style.left), y = parseInt(b.style.top);
+                        const w = parseInt(b.style.width), h = parseInt(b.style.height);
+                        if(checkCollision(x, y, w, h, newLayer, editingGroup)) layerConflict = true;
+                    }
+                }
+
+                if(layerConflict) {
+                    alert('변경하려는 레이어의 해당 위치에 이미 다른 가구가 있어 레이어를 변경할 수 없습니다!');
+                    return;
+                }
+
                 const newName = nameInput.value.trim();
                 const newColor = colorInput.value;
 
@@ -334,46 +438,32 @@
                     b.dataset.name = newName;
                     b.dataset.color = newColor;
                     b.style.backgroundColor = newColor;
+                    b.dataset.layer = newLayer;
+                    b.style.zIndex = newLayer * 10;
                 });
             }
             closeModal();
             updateMergesAndLabels();
         }
 
-        btnDelete.onclick = function() {
+        document.getElementById('btn-delete').onclick = function() {
             editingGroup.forEach(b => b.remove());
-            closeModal();
-            updateMergesAndLabels();
+            closeModal(); updateMergesAndLabels();
         };
 
-        // ======= 핵심 로직: 클러스터(그룹) 찾기 및 디자인 업데이트 =======
         function getClusters(blocks) {
-            const visited = new Set();
-            const clusters = [];
-
+            const visited = new Set(); const clusters = [];
             blocks.forEach(b => {
                 if (visited.has(b)) return;
-                
-                const name = b.dataset.name || "";
-                const color = b.dataset.color || "";
-                
-                const cluster = [];
-                const queue = [b];
-                visited.add(b);
+                const name = b.dataset.name || ""; const color = b.dataset.color || ""; const layer = b.dataset.layer;
+                const cluster = []; const queue = [b]; visited.add(b);
 
                 while (queue.length > 0) {
-                    const current = queue.shift();
-                    cluster.push(current);
-
+                    const current = queue.shift(); cluster.push(current);
                     blocks.forEach(other => {
                         if (visited.has(other)) return;
-                        // 이름과 색이 똑같아야 같은 그룹으로 묶음
-                        if (!name || other.dataset.name !== name || other.dataset.color !== color) return;
-
-                        if (isAdjacent(current, other)) {
-                            visited.add(other);
-                            queue.push(other);
-                        }
+                        if (!name || other.dataset.name !== name || other.dataset.color !== color || other.dataset.layer !== layer) return;
+                        if (isAdjacent(current, other)) { visited.add(other); queue.push(other); }
                     });
                 }
                 clusters.push(cluster);
@@ -382,46 +472,30 @@
         }
 
         function isAdjacent(a, b) {
-            const aL = parseInt(a.style.left), aT = parseInt(a.style.top);
-            const aW = parseInt(a.style.width), aH = parseInt(a.style.height);
-            const bL = parseInt(b.style.left), bT = parseInt(b.style.top);
-            const bW = parseInt(b.style.width), bH = parseInt(b.style.height);
-
-            const vOverlap = (aT < bT + bH) && (aT + aH > bT);
-            const hOverlap = (aL < bL + bW) && (aL + aW > bL);
-
-            return ((aL + aW === bL || aL === bL + bW) && vOverlap) ||
-                   ((aT + aH === bT || aT === bT + bH) && hOverlap);
+            const aL = parseInt(a.style.left), aT = parseInt(a.style.top), aW = parseInt(a.style.width), aH = parseInt(a.style.height);
+            const bL = parseInt(b.style.left), bT = parseInt(b.style.top), bW = parseInt(b.style.width), bH = parseInt(b.style.height);
+            const vOverlap = (aT < bT + bH) && (aT + aH > bT); const hOverlap = (aL < bL + bW) && (aL + aW > bL);
+            return ((aL + aW === bL || aL === bL + bW) && vOverlap) || ((aT + aH === bT || aT === bT + bH) && hOverlap);
         }
 
         function updateMergesAndLabels() {
             const blocks = Array.from(document.querySelectorAll('.block'));
-            labelsContainer.innerHTML = ''; // 기존 라벨 초기화
-
-            // 모든 테두리 초기화
+            labelsContainer.innerHTML = ''; 
             blocks.forEach(b => { b.style.border = '2px solid #333'; });
 
             const clusters = getClusters(blocks);
 
             clusters.forEach(cluster => {
                 if (cluster.length === 0) return;
-                
-                const name = cluster[0].dataset.name;
-                const color = cluster[0].dataset.color;
+                const name = cluster[0].dataset.name; const layer = cluster[0].dataset.layer;
 
-                // 1. 그룹 내부의 겹치는 테두리 지우기
                 for (let i = 0; i < cluster.length; i++) {
                     for (let j = 0; j < cluster.length; j++) {
                         if (i === j) continue;
-                        const a = cluster[i]; const b = cluster[j];
-                        
-                        const aL = parseInt(a.style.left), aT = parseInt(a.style.top);
-                        const aW = parseInt(a.style.width), aH = parseInt(a.style.height);
-                        const bL = parseInt(b.style.left), bT = parseInt(b.style.top);
-                        const bW = parseInt(b.style.width), bH = parseInt(b.style.height);
-
-                        const vOverlap = (aT < bT + bH) && (aT + aH > bT);
-                        const hOverlap = (aL < bL + bW) && (aL + aW > bL);
+                        const a = cluster[i], b = cluster[j];
+                        const aL = parseInt(a.style.left), aT = parseInt(a.style.top), aW = parseInt(a.style.width), aH = parseInt(a.style.height);
+                        const bL = parseInt(b.style.left), bT = parseInt(b.style.top), bW = parseInt(b.style.width), bH = parseInt(b.style.height);
+                        const vOverlap = (aT < bT + bH) && (aT + aH > bT); const hOverlap = (aL < bL + bW) && (aL + aW > bL);
 
                         if (aL + aW === bL && vOverlap) a.style.borderRight = 'none';
                         if (aL === bL + bW && vOverlap) a.style.borderLeft = 'none';
@@ -430,7 +504,6 @@
                     }
                 }
 
-                // 2. 그룹 정중앙에 '이름 라벨' 딱 하나만 생성하기
                 if (name) {
                     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
                     cluster.forEach(b => {
@@ -439,22 +512,51 @@
                         if (x < minX) minX = x; if (y < minY) minY = y;
                         if (x + w > maxX) maxX = x + w; if (y + h > maxY) maxY = y + h;
                     });
-
-                    // 전체 도형을 아우르는 박스의 중앙 좌표 계산
-                    const centerX = minX + (maxX - minX) / 2;
-                    const centerY = minY + (maxY - minY) / 2;
-
                     const label = document.createElement('div');
-                    label.className = 'group-label';
-                    label.innerText = name;
-                    label.style.left = centerX + 'px';
-                    label.style.top = centerY + 'px';
+                    label.className = 'group-label'; label.innerText = name;
+                    label.dataset.layer = layer; // 라벨에도 레이어 정보 저장
+                    label.style.left = (minX + (maxX - minX) / 2) + 'px';
+                    label.style.top = (minY + (maxY - minY) / 2) + 'px';
                     labelsContainer.appendChild(label);
                 }
             });
+            updateLayerVisibility(); // 병합 후 투명도 재적용
         }
 
-        // ======= 유틸리티 =======
+        function saveRoom() {
+            const blocks = Array.from(document.querySelectorAll('.block'));
+            const data = blocks.map(b => ({
+                left: b.style.left, top: b.style.top,
+                width: b.style.width, height: b.style.height,
+                name: b.dataset.name, color: b.dataset.color, layer: b.dataset.layer
+            }));
+            localStorage.setItem('roomEditorData', JSON.stringify({ w: gridCols, h: gridRows, blocks: data }));
+            alert('현재 방의 상태가 브라우저에 임시 저장되었습니다!');
+        }
+
+        function loadRoom() {
+            const savedStr = localStorage.getItem('roomEditorData');
+            if(!savedStr) { alert('저장된 방 데이터가 없습니다.'); return; }
+            if(!confirm('저장된 방을 불러오시겠습니까? 현재 화면의 내용은 사라집니다.')) return;
+            
+            const saved = JSON.parse(savedStr);
+            setRoomSize(saved.w, saved.h);
+            document.querySelectorAll('.block').forEach(b => b.remove());
+            
+            saved.blocks.forEach(d => {
+                const block = document.createElement('div');
+                block.classList.add('block');
+                block.style.left = d.left; block.style.top = d.top;
+                block.style.width = d.width; block.style.height = d.height;
+                block.style.backgroundColor = d.color;
+                block.dataset.name = d.name; block.dataset.color = d.color;
+                block.dataset.layer = d.layer;
+                block.style.zIndex = d.layer * 10;
+                grid.appendChild(block);
+            });
+            updateMergesAndLabels();
+        }
+
         function clearRoom() {
             if(confirm('배치한 가구를 모두 지우시겠습니까?')) {
                 document.querySelectorAll('.block').forEach(b => b.remove());
@@ -462,13 +564,16 @@
             }
         }
 
+        // 이미지 저장 시에는 모든 레이어가 선명하게 나오도록 일시적으로 해제
         function exportToImage() {
             preview.style.display = 'none';
+            const blocks = document.querySelectorAll('.block, .group-label');
+            blocks.forEach(b => b.style.opacity = '1'); // 캡처 전 모두 선명하게
+
             html2canvas(grid).then(canvas => {
                 const link = document.createElement('a');
-                link.download = 'my_room_pro.png';
-                link.href = canvas.toDataURL();
-                link.click();
+                link.download = 'my_room_layers.png'; link.href = canvas.toDataURL(); link.click();
+                updateLayerVisibility(); // 캡처 후 원래 상태로 복구
             });
         }
     </script>
