@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>도형 기반 방 꾸미기 에디터 (Pro)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            margin: 0; padding: 20px; background-color: #f4f7f6; color: #333;
+        }
+        h1 { text-align: center; margin-bottom: 10px; }
+        
+        .toolbar { display: flex; justify-content: center; gap: 15px; margin-bottom: 20px; }
+        button {
+            padding: 8px 16px; border: none; border-radius: 6px;
+            background-color: #4CAF50; color: white; cursor: pointer;
+            font-weight: bold; transition: 0.2s;
+        }
+        button:hover { background-color: #45a049; }
+        .btn-outline { background-color: white; color: #4CAF50; border: 2px solid #4CAF50; }
+        .btn-outline:hover { background-color: #e8f5e9; }
+        .btn-danger { background-color: #f44336; }
+        .btn-danger:hover { background-color: #d32f2f; }
+
+        .container { display: flex; justify-content: center; gap: 20px; align-items: flex-start; }
+
+        .sidebar {
+            width: 180px; background: white; padding: 15px; border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1); user-select: none;
+        }
+        .shape-group-title { font-size: 14px; color: #666; margin-top: 15px; margin-bottom: 5px; }
+        .shape-btn {
+            display: block; width: 100%; padding: 10px; margin-bottom: 8px;
+            background: #e0e0e0; border: 2px solid transparent; border-radius: 5px;
+            cursor: pointer; text-align: center; font-weight: bold;
+        }
+        .shape-btn.selected { border-color: #ff9800; background: #fff3e0; color: #ff9800; }
+
+        #workspace {
+            background: white; padding: 20px; border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1); overflow: auto;
+        }
+        #grid {
+            position: relative; background-color: white;
+            background-image: linear-gradient(to right, #e0e0e0 1px, transparent 1px),
+                              linear-gradient(to bottom, #e0e0e0 1px, transparent 1px);
+            background-size: 20px 20px; border: 1px solid #ccc; cursor: crosshair;
+        }
+
+        .block {
+            position: absolute; box-sizing: border-box;
+            border: 2px solid #333; background-color: #cccccc; cursor: grab;
+        }
+        .block:active { cursor: grabbing; }
+
+        #preview {
+            position: absolute; border: 2px dashed #ff9800; background: rgba(255, 152, 0, 0.3);
+            pointer-events: none; display: none; z-index: 10;
+        }
+
+        /* 합쳐진 그룹 위에 띄울 이름 라벨 컨테이너 */
+        #labels-container {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 20;
+        }
+        .group-label {
+            position: absolute; transform: translate(-50%, -50%);
+            font-size: 13px; font-weight: bold; text-align: center;
+            /* 글씨가 잘 보이도록 하얀색 테두리 효과 추가 */
+            text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff; 
+            color: #333; pointer-events: none; white-space: nowrap;
+        }
+
+        #edit-modal {
+            display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: white; padding: 20px; border-radius: 10px; z-index: 1000;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3); width: 250px;
+        }
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5); z-index: 999;
+        }
+        .modal-row { margin-bottom: 15px; }
+        .modal-row label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .modal-row input[type="text"] { width: 100%; padding: 8px; box-sizing: border-box; }
+        .modal-row input[type="color"] { width: 100%; height: 40px; cursor: pointer; border: none; }
+        .modal-actions { display: flex; justify-content: space-between; margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+    <h1>🛋️ 나만의 방 꾸미기 (드래그 & 자동병합)</h1>
+    
+    <div class="toolbar">
+        <button class="btn-outline" onclick="setRoomSize(40, 30)">가로형 (40x30)</button>
+        <button class="btn-outline" onclick="setRoomSize(30, 40)">세로형 (30x40)</button>
+        <button onclick="exportToImage()">📸 이미지로 저장</button>
+        <button class="btn-danger" onclick="clearRoom()">🗑️ 모두 지우기</button>
+    </div>
+
+    <div class="container">
+        <div class="sidebar" id="palette">
+            <div class="shape-group-title">정사각형</div>
+            <div class="shape-btn selected" data-w="1" data-h="1">1 × 1</div>
+            <div class="shape-btn" data-w="2" data-h="2">2 × 2</div>
+            <div class="shape-btn" data-w="3" data-h="3">3 × 3</div>
+            <div class="shape-btn" data-w="4" data-h="4">4 × 4</div>
+            
+            <div class="shape-group-title">가로/세로</div>
+            <div class="shape-btn" data-w="2" data-h="1">2 × 1</div>
+            <div class="shape-btn" data-w="3" data-h="1">3 × 1</div>
+            <div class="shape-btn" data-w="1" data-h="2">1 × 2</div>
+            <div class="shape-btn" data-w="1" data-h="3">1 × 3</div>
+        </div>
+
+        <div id="workspace">
+            <div id="grid">
+                <div id="labels-container"></div>
+                <div id="preview"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modal-overlay"></div>
+    <div id="edit-modal">
+        <h3 style="margin-top: 0;">가구 속성 편집</h3>
+        <p style="font-size: 12px; color: #666; margin-top: -10px;">같은 이름을 입력하면 색상이 자동 동기화됩니다.</p>
+        <div class="modal-row">
+            <label>이름 입력:</label>
+            <input type="text" id="edit-name" placeholder="예: 소파, 책상">
+        </div>
+        <div class="modal-row">
+            <label>색상 선택:</label>
+            <input type="color" id="edit-color" value="#cccccc">
+        </div>
+        <div class="modal-actions">
+            <button class="btn-danger" id="btn-delete">삭제</button>
+            <button class="btn-outline" onclick="closeModal()">취소</button>
+            <button onclick="saveEdit()">확인</button>
+        </div>
+    </div>
+
+    <script>
+        const grid = document.getElementById('grid');
+        const preview = document.getElementById('preview');
+        const labelsContainer = document.getElementById('labels-container');
+        const shapeBtns = document.querySelectorAll('.shape-btn');
+        const CELL_SIZE = 20; 
+        
+        let currentW = 1; let currentH = 1;
+        let gridCols = 40; let gridRows = 30;
+        
+        // 드래그 및 편집 상태 변수
+        let isDragging = false;
+        let hasMoved = false;
+        let dragGroup = [];
+        let initialPos = [];
+        let startX = 0; let startY = 0;
+        let editingGroup = [];
+
+        function setRoomSize(cols, rows) {
+            gridCols = cols; gridRows = rows;
+            grid.style.width = (cols * CELL_SIZE) + 'px';
+            grid.style.height = (rows * CELL_SIZE) + 'px';
+            updateMergesAndLabels();
+        }
+        setRoomSize(40, 30);
+
+        shapeBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                shapeBtns.forEach(b => b.classList.remove('selected'));
+                e.target.classList.add('selected');
+                currentW = parseInt(e.target.dataset.w);
+                currentH = parseInt(e.target.dataset.h);
+                preview.style.width = (currentW * CELL_SIZE) + 'px';
+                preview.style.height = (currentH * CELL_SIZE) + 'px';
+            });
+        });
+
+        // 빈 공간 미리보기 및 클릭 배치
+        grid.addEventListener('mousemove', (e) => {
+            if (isDragging) return;
+            if (e.target !== grid) return; 
+            const x = Math.floor(e.offsetX / CELL_SIZE) * CELL_SIZE;
+            const y = Math.floor(e.offsetY / CELL_SIZE) * CELL_SIZE;
+
+            if (x + (currentW * CELL_SIZE) > gridCols * CELL_SIZE || 
+                y + (currentH * CELL_SIZE) > gridRows * CELL_SIZE) {
+                preview.style.display = 'none';
+            } else {
+                preview.style.display = 'block';
+                preview.style.left = x + 'px';
+                preview.style.top = y + 'px';
+            }
+        });
+
+        grid.addEventListener('mouseleave', () => { preview.style.display = 'none'; });
+
+        grid.addEventListener('click', (e) => {
+            if (hasMoved) { hasMoved = false; return; } // 드래그 끝난 직후 클릭 방지
+            if (e.target !== grid || preview.style.display === 'none') return; 
+
+            const block = document.createElement('div');
+            block.classList.add('block');
+            block.style.left = preview.style.left;
+            block.style.top = preview.style.top;
+            block.style.width = preview.style.width;
+            block.style.height = preview.style.height;
+            block.style.backgroundColor = '#cccccc';
+            block.dataset.name = '';
+            block.dataset.color = '#cccccc';
+
+            grid.appendChild(block);
+            openModal([block]); // 생성 직후 모달 열기
+        });
+
+        // ======= 마우스 드래그 앤 드롭 이동 =======
+        grid.addEventListener('mousedown', (e) => {
+            if (e.button !== 0) return; // 좌클릭만 허용
+            const block = e.target.closest('.block');
+            if (!block) return;
+
+            isDragging = true;
+            hasMoved = false;
+            startX = e.clientX;
+            startY = e.clientY;
+            preview.style.display = 'none'; // 드래그 시 미리보기 숨김
+
+            // 연결된 전체 그룹 찾기
+            const blocks = Array.from(document.querySelectorAll('.block'));
+            const clusters = getClusters(blocks);
+            dragGroup = clusters.find(c => c.includes(block)) || [block];
+
+            // 시작 위치 기록
+            initialPos = dragGroup.map(b => ({
+                el: b, left: parseInt(b.style.left), top: parseInt(b.style.top)
+            }));
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+
+            if (Math.abs(dx) > 3 || Math.abs(dy) > 3) hasMoved = true;
+
+            if (hasMoved) {
+                const snapDx = Math.round(dx / CELL_SIZE) * CELL_SIZE;
+                const snapDy = Math.round(dy / CELL_SIZE) * CELL_SIZE;
+
+                // 그룹 중 하나라도 격자 밖으로 나가면 이동 차단
+                let canMove = true;
+                for (let i = 0; i < dragGroup.length; i++) {
+                    const init = initialPos[i];
+                    const nx = init.left + snapDx;
+                    const ny = init.top + snapDy;
+                    const w = parseInt(dragGroup[i].style.width);
+                    const h = parseInt(dragGroup[i].style.height);
+                    if (nx < 0 || ny < 0 || nx + w > gridCols * CELL_SIZE || ny + h > gridRows * CELL_SIZE) {
+                        canMove = false; break;
+                    }
+                }
+
+                if (canMove) {
+                    dragGroup.forEach((b, i) => {
+                        b.style.left = (initialPos[i].left + snapDx) + 'px';
+                        b.style.top = (initialPos[i].top + snapDy) + 'px';
+                    });
+                }
+            }
+        });
+
+        window.addEventListener('mouseup', (e) => {
+            if (!isDragging) return;
+            isDragging = false;
+
+            if (hasMoved) {
+                // 드래그가 끝났을 때 다시 병합 및 라벨 계산
+                updateMergesAndLabels();
+            } else {
+                // 제자리에서 클릭한 경우 편집 모달 열기
+                const block = e.target.closest('.block');
+                if (block) {
+                    const blocks = Array.from(document.querySelectorAll('.block'));
+                    const clusters = getClusters(blocks);
+                    const group = clusters.find(c => c.includes(block)) || [block];
+                    openModal(group);
+                }
+            }
+        });
+
+        // ======= 속성 편집 모달 =======
+        const modal = document.getElementById('edit-modal');
+        const overlay = document.getElementById('modal-overlay');
+        const nameInput = document.getElementById('edit-name');
+        const colorInput = document.getElementById('edit-color');
+        const btnDelete = document.getElementById('btn-delete');
+
+        function openModal(group) {
+            editingGroup = group;
+            const repBlock = group[0]; // 대표 블록
+            nameInput.value = repBlock.dataset.name || '';
+            colorInput.value = repBlock.dataset.color || '#cccccc';
+            modal.style.display = 'block'; overlay.style.display = 'block';
+            nameInput.focus();
+        }
+
+        function closeModal() {
+            modal.style.display = 'none'; overlay.style.display = 'none';
+            editingGroup = [];
+        }
+
+        // ⭐ 이름 입력 시 기존 같은 이름의 색상을 자동으로 불러오는 기능
+        nameInput.addEventListener('input', (e) => {
+            const typed = e.target.value.trim();
+            if (typed) {
+                const allBlocks = Array.from(document.querySelectorAll('.block'));
+                // 현재 편집중인 그룹이 아니면서 이름이 같은 블록 탐색
+                const match = allBlocks.find(b => b.dataset.name === typed && !editingGroup.includes(b));
+                if (match) {
+                    colorInput.value = match.dataset.color; // 색상 자동 동기화
+                }
+            }
+        });
+
+        function saveEdit() {
+            if (editingGroup.length > 0) {
+                const newName = nameInput.value.trim();
+                const newColor = colorInput.value;
+
+                editingGroup.forEach(b => {
+                    b.dataset.name = newName;
+                    b.dataset.color = newColor;
+                    b.style.backgroundColor = newColor;
+                });
+            }
+            closeModal();
+            updateMergesAndLabels();
+        }
+
+        btnDelete.onclick = function() {
+            editingGroup.forEach(b => b.remove());
+            closeModal();
+            updateMergesAndLabels();
+        };
+
+        // ======= 핵심 로직: 클러스터(그룹) 찾기 및 디자인 업데이트 =======
+        function getClusters(blocks) {
+            const visited = new Set();
+            const clusters = [];
+
+            blocks.forEach(b => {
+                if (visited.has(b)) return;
+                
+                const name = b.dataset.name || "";
+                const color = b.dataset.color || "";
+                
+                const cluster = [];
+                const queue = [b];
+                visited.add(b);
+
+                while (queue.length > 0) {
+                    const current = queue.shift();
+                    cluster.push(current);
+
+                    blocks.forEach(other => {
+                        if (visited.has(other)) return;
+                        // 이름과 색이 똑같아야 같은 그룹으로 묶음
+                        if (!name || other.dataset.name !== name || other.dataset.color !== color) return;
+
+                        if (isAdjacent(current, other)) {
+                            visited.add(other);
+                            queue.push(other);
+                        }
+                    });
+                }
+                clusters.push(cluster);
+            });
+            return clusters;
+        }
+
+        function isAdjacent(a, b) {
+            const aL = parseInt(a.style.left), aT = parseInt(a.style.top);
+            const aW = parseInt(a.style.width), aH = parseInt(a.style.height);
+            const bL = parseInt(b.style.left), bT = parseInt(b.style.top);
+            const bW = parseInt(b.style.width), bH = parseInt(b.style.height);
+
+            const vOverlap = (aT < bT + bH) && (aT + aH > bT);
+            const hOverlap = (aL < bL + bW) && (aL + aW > bL);
+
+            return ((aL + aW === bL || aL === bL + bW) && vOverlap) ||
+                   ((aT + aH === bT || aT === bT + bH) && hOverlap);
+        }
+
+        function updateMergesAndLabels() {
+            const blocks = Array.from(document.querySelectorAll('.block'));
+            labelsContainer.innerHTML = ''; // 기존 라벨 초기화
+
+            // 모든 테두리 초기화
+            blocks.forEach(b => { b.style.border = '2px solid #333'; });
+
+            const clusters = getClusters(blocks);
+
+            clusters.forEach(cluster => {
+                if (cluster.length === 0) return;
+                
+                const name = cluster[0].dataset.name;
+                const color = cluster[0].dataset.color;
+
+                // 1. 그룹 내부의 겹치는 테두리 지우기
+                for (let i = 0; i < cluster.length; i++) {
+                    for (let j = 0; j < cluster.length; j++) {
+                        if (i === j) continue;
+                        const a = cluster[i]; const b = cluster[j];
+                        
+                        const aL = parseInt(a.style.left), aT = parseInt(a.style.top);
+                        const aW = parseInt(a.style.width), aH = parseInt(a.style.height);
+                        const bL = parseInt(b.style.left), bT = parseInt(b.style.top);
+                        const bW = parseInt(b.style.width), bH = parseInt(b.style.height);
+
+                        const vOverlap = (aT < bT + bH) && (aT + aH > bT);
+                        const hOverlap = (aL < bL + bW) && (aL + aW > bL);
+
+                        if (aL + aW === bL && vOverlap) a.style.borderRight = 'none';
+                        if (aL === bL + bW && vOverlap) a.style.borderLeft = 'none';
+                        if (aT + aH === bT && hOverlap) a.style.borderBottom = 'none';
+                        if (aT === bT + bH && hOverlap) a.style.borderTop = 'none';
+                    }
+                }
+
+                // 2. 그룹 정중앙에 '이름 라벨' 딱 하나만 생성하기
+                if (name) {
+                    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+                    cluster.forEach(b => {
+                        const x = parseInt(b.style.left), y = parseInt(b.style.top);
+                        const w = parseInt(b.style.width), h = parseInt(b.style.height);
+                        if (x < minX) minX = x; if (y < minY) minY = y;
+                        if (x + w > maxX) maxX = x + w; if (y + h > maxY) maxY = y + h;
+                    });
+
+                    // 전체 도형을 아우르는 박스의 중앙 좌표 계산
+                    const centerX = minX + (maxX - minX) / 2;
+                    const centerY = minY + (maxY - minY) / 2;
+
+                    const label = document.createElement('div');
+                    label.className = 'group-label';
+                    label.innerText = name;
+                    label.style.left = centerX + 'px';
+                    label.style.top = centerY + 'px';
+                    labelsContainer.appendChild(label);
+                }
+            });
+        }
+
+        // ======= 유틸리티 =======
+        function clearRoom() {
+            if(confirm('배치한 가구를 모두 지우시겠습니까?')) {
+                document.querySelectorAll('.block').forEach(b => b.remove());
+                updateMergesAndLabels();
+            }
+        }
+
+        function exportToImage() {
+            preview.style.display = 'none';
+            html2canvas(grid).then(canvas => {
+                const link = document.createElement('a');
+                link.download = 'my_room_pro.png';
+                link.href = canvas.toDataURL();
+                link.click();
+            });
+        }
+    </script>
+</body>
+</html>
