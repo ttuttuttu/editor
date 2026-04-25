@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>페어 배정 안내문</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+    /* 기본 테마 변수 */
+    :root {
+        --bg-color: #0c0c0e;
+        --panel-bg: #16161a;
+        --card-bg: #1f1f24;
+        --text-main: #f0f0f0;
+        --text-sub: #888;
+        --border: #333;
+        
+        /* 사용자가 변경할 변수들 */
+        --accent: #9d85ff;     /* 전체 테마색 */
+        --color-a: #ff5a5a;    /* 캐릭터 A 색상 (기본: 불) */
+        --color-b: #5a9dff;    /* 캐릭터 B 색상 (기본: 물) */
+    }
+
+    body {
+        margin: 0;
+        padding: 20px;
+        background-color: var(--bg-color);
+        color: var(--text-main);
+        font-family: 'Pretendard', sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .container {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        width: 100%;
+        max-width: 1000px;
+    }
+
+    @media (min-width: 768px) {
+        .container { flex-direction: row; align-items: flex-start; }
+        .editor-section { width: 380px; position: sticky; top: 20px; max-height: 90vh; overflow-y: auto; padding-right: 10px; }
+        .preview-section { flex: 1; }
+    }
+
+    /* 에디터 스크롤바 */
+    .editor-section::-webkit-scrollbar { width: 6px; }
+    .editor-section::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+
+    /* 에디터 스타일 */
+    .editor-section {
+        background: var(--panel-bg);
+        padding: 20px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+    }
+
+    .section-title { font-size: 1rem; color: var(--accent); font-weight: bold; margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 5px; }
+    .form-group { margin-bottom: 15px; }
+    label { display: block; margin-bottom: 6px; font-size: 0.8rem; color: var(--text-sub); }
+    
+    input[type="text"], input[type="number"], input[type="file"], textarea, select {
+        width: 100%; padding: 10px; background: #000; border: 1px solid var(--border);
+        color: #fff; border-radius: 6px; box-sizing: border-box; font-family: inherit; font-size: 0.9rem;
+    }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+    
+    /* 드롭다운 가로 배치 */
+    .select-group { display: flex; gap: 8px; }
+    .select-group select { flex: 1; cursor: pointer; padding: 10px 5px; text-align: center;}
+
+    /* 색상 선택기 세로 배치 */
+    .color-picker-group { display: flex; flex-direction: column; gap: 10px; }
+    .color-row { display: flex; align-items: center; justify-content: space-between; background: #000; padding: 5px 15px; border-radius: 6px; border: 1px solid var(--border);}
+    .color-row label { margin-bottom: 0; font-size: 0.85rem; color: #ccc;}
+    input[type="color"] { width: 40px; height: 30px; padding: 0; border: none; background: none; cursor: pointer; border-radius: 4px;}
+
+    .btn-save {
+        width: 100%; padding: 14px; background: var(--accent); color: #000;
+        border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 1rem;
+        transition: opacity 0.2s;
+    }
+    .btn-save:hover { opacity: 0.9; }
+
+    /* ========================================= */
+    /* 페어틀 미리보기 스타일 (캡쳐 영역) */
+    /* ========================================= */
+    .preview-section {
+        display: flex; flex-direction: column; align-items: center; gap: 15px;
+    }
+
+    #capture-area {
+        background: var(--card-bg);
+        width: 100%;
+        max-width: 520px; 
+        padding: 30px;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        border: 1px solid #2a2a30;
+    }
+
+    .card-header {
+        width: 100%; text-align: center; font-size: 0.85rem; color: var(--text-sub);
+        letter-spacing: 2px; margin-bottom: 25px; border-bottom: 1px solid var(--border); padding-bottom: 10px;
+        font-weight: bold;
+    }
+
+    .profiles-container {
+        display: flex; width: 100%; justify-content: space-between; align-items: flex-start;
+        margin-bottom: 30px; gap: 20px;
+    }
+
+    .profile-block { flex: 1; display: flex; flex-direction: column; align-items: center; width: 45%;}
+
+    /* 사진 프레임 */
+    .photo-frame {
+        width: 100%; aspect-ratio: 2 / 3; 
+        background: #111;
+        border: 2px solid var(--border); 
+        border-radius: 8px;
+        overflow: hidden;
+        margin-bottom: 15px;
+        display: flex; align-items: center; justify-content: center;
+        transition: border-color 0.3s;
+    }
+    
+    /* 캐릭터별 퍼스널 컬러 적용 */
+    #frameA { border-color: var(--color-a); } 
+    #frameB { border-color: var(--color-b); }
+
+    .preview-img { width: 100%; height: 100%; object-fit: cover; display: none; }
+    .no-img-text { color: #444; font-size: 0.8rem; }
+
+    /* 이름 및 등급 정보 스타일 */
+    .name-container { text-align: center; width: 100%;}
+    .code-name { 
+        font-size: 1.4rem; font-weight: 800; letter-spacing: 1px; 
+        text-transform: uppercase; color: var(--text-main); 
+        margin-bottom: 2px;
+        word-break: break-all;
+    }
+    .real-name { font-size: 0.85rem; color: var(--text-sub); }
+    
+    /* 속성/등급 텍스트 (캐릭터별 색상 적용) */
+    .class-info { font-size: 0.85rem; font-weight: bold; margin-top: 6px; letter-spacing: 0.5px; }
+    #outInfoA { color: var(--color-a); }
+    #outInfoB { color: var(--color-b); }
+
+    /* 중앙 구분선/아이콘 */
+    .profile-separator {
+        display: flex; align-items: center; justify-content: center;
+        height: 200px; 
+        font-size: 1.5rem; font-weight: bold; color: var(--accent);
+    }
+
+    /* 하단 상태창 & 소견 */
+    .status-box { width: 100%; margin-bottom: 20px; padding: 15px; background: rgba(0,0,0,0.2); border-radius: 10px; box-sizing: border-box;}
+    .status-label { display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 8px; color: var(--text-sub); letter-spacing: 1px;}
+    .bar-bg { width: 100%; height: 8px; background: #000; border-radius: 4px; overflow: hidden; border: 1px solid var(--border);}
+    .bar-fill { height: 100%; background: var(--accent); width: 0%; transition: 0.5s; box-shadow: 0 0 10px var(--accent);}
+
+    .opinion-box { width: 100%; padding-top: 15px; font-size: 0.85rem; line-height: 1.6; color: #ccc; word-break: break-all; }
+    .opinion-title { font-size: 0.75rem; color: var(--accent); margin-bottom: 6px; font-weight: bold; letter-spacing: 1px;}
+</style>
+</head>
+<body>
+
+<div class="container">
+    <div class="editor-section">
+        <h2 style="margin-top:0; margin-bottom:20px;">페어 배정 안내문 <span style="font-size:0.8rem; color:var(--text-sub)">속성Ver.</span></h2>
+        
+        <div class="section-title">COLOR SETTINGS</div>
+        <div class="form-group color-picker-group">
+            <div class="color-row">
+                <label>전체 테마 (시스템 색상)</label>
+                <input type="color" id="inThemeColor" value="#9d85ff">
+            </div>
+            <div class="color-row">
+                <label>캐릭터 A 포인트 색상</label>
+                <input type="color" id="inColorA" value="#ff5a5a">
+            </div>
+            <div class="color-row">
+                <label>캐릭터 B 포인트 색상</label>
+                <input type="color" id="inColorB" value="#5a9dff">
+            </div>
+        </div>
+
+        <div class="section-title">CHARACTER A</div>
+        <div class="form-group">
+            <label>프로필 사진 (2:3 비율)</label>
+            <input type="file" id="inImgA" accept="image/*">
+        </div>
+        <div class="form-group">
+            <label>코드네임 / 본명</label>
+            <div style="display:flex; gap:10px;">
+                <input type="text" id="inCodeA" value="IGNIS" placeholder="코드네임">
+                <input type="text" id="inRealA" value="김철수" placeholder="본명">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>등급 / 속성 / 종류</label>
+            <div class="select-group">
+                <select id="inClassA">
+                    <option value="SS">SS급</option>
+                    <option value="S" selected>S급</option>
+                    <option value="A">A급</option>
+                    <option value="B">B급</option>
+                    <option value="C">C급</option>
+                </select>
+                <select id="inElementA">
+                    <option value="">없음</option>
+                    <option value="불" selected>불</option>
+                    <option value="풀">풀</option>
+                    <option value="물">물</option>
+                    <option value="전기">전기</option>
+                    <option value="바람">바람</option>
+                    <option value="얼음">얼음</option>
+                </select>
+                <select id="inTypeA">
+                    <option value="센티넬" selected>센티넬</option>
+                    <option value="가이드">가이드</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="section-title">CHARACTER B</div>
+        <div class="form-group">
+            <label>프로필 사진 (2:3 비율)</label>
+            <input type="file" id="inImgB" accept="image/*">
+        </div>
+        <div class="form-group">
+            <label>코드네임 / 본명</label>
+            <div style="display:flex; gap:10px;">
+                <input type="text" id="inCodeB" value="AQUA" placeholder="코드네임">
+                <input type="text" id="inRealB" value="이영희" placeholder="본명">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>등급 / 속성 / 종류</label>
+            <div class="select-group">
+                <select id="inClassB">
+                    <option value="SS">SS급</option>
+                    <option value="S" selected>S급</option>
+                    <option value="A">A급</option>
+                    <option value="B">B급</option>
+                    <option value="C">C급</option>
+                </select>
+                <select id="inElementB">
+                    <option value="">없음</option>
+                    <option value="불">불</option>
+                    <option value="풀">풀</option>
+                    <option value="물" selected>물</option>
+                    <option value="전기">전기</option>
+                    <option value="바람">바람</option>
+                    <option value="얼음">얼음</option>
+                </select>
+                <select id="inTypeB">
+                    <option value="센티넬">센티넬</option>
+                    <option value="가이드" selected>가이드</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="section-title">PAIR DATA</div>
+        <div class="form-group">
+            <label>파장 일치율 (%)</label>
+            <input type="number" id="inSync" value="95" min="0" max="100">
+        </div>
+        <div class="form-group">
+            <label>특이사항 / 소견</label>
+            <textarea id="inOpinion" rows="4">상극 속성(불-물)임에도 불구하고 파장 일치율이 95%를 초과하는 희귀 케이스. 가이딩 시너지 효과가 매우 뛰어남.</textarea>
+        </div>
+
+        <button class="btn-save" onclick="saveImage()">안내문 이미지로 저장</button>
+    </div>
+
+    <div class="preview-section">
+        <div id="capture-area">
+            <div class="card-header">페어 배정 안내문</div>
+
+            <div class="profiles-container">
+                <div class="profile-block">
+                    <div class="photo-frame" id="frameA">
+                        <img id="outImgA" class="preview-img" src="" alt="Photo A">
+                        <span class="no-img-text" id="txtNoImgA">NO IMG</span>
+                    </div>
+                    <div class="name-container">
+                        <div class="code-name" id="outCodeA">IGNIS</div>
+                        <div class="real-name" id="outRealA">김철수</div>
+                        <div class="class-info" id="outInfoA">S급 불속성 센티넬</div>
+                    </div>
+                </div>
+
+                <div class="profile-separator">×</div>
+
+                <div class="profile-block">
+                    <div class="photo-frame" id="frameB">
+                        <img id="outImgB" class="preview-img" src="" alt="Photo B">
+                        <span class="no-img-text" id="txtNoImgB">NO IMG</span>
+                    </div>
+                    <div class="name-container">
+                        <div class="code-name" id="outCodeB">AQUA</div>
+                        <div class="real-name" id="outRealB">이영희</div>
+                        <div class="class-info" id="outInfoB">S급 물속성 가이드</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="status-box">
+                <div class="status-label">
+                    <span>WAVELENGTH SYNC RATE</span>
+                    <span id="outSyncNum">95%</span>
+                </div>
+                <div class="bar-bg">
+                    <div class="bar-fill" id="outSyncBar" style="width: 95%;"></div>
+                </div>
+            </div>
+
+            <div class="opinion-box">
+                <div class="opinion-title">MANAGEMENT REMARKS / 특이사항</div>
+                <div id="outOpinion">상극 속성(불-물)임에도 불구하고 파장 일치율이 95%를 초과하는 희귀 케이스. 가이딩 시너지 효과가 매우 뛰어남.</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const el = (id) => document.getElementById(id);
+
+    // --- 1. 색상 선택 연동 ---
+    el('inThemeColor').addEventListener('input', (e) => document.documentElement.style.setProperty('--accent', e.target.value));
+    el('inColorA').addEventListener('input', (e) => document.documentElement.style.setProperty('--color-a', e.target.value));
+    el('inColorB').addEventListener('input', (e) => document.documentElement.style.setProperty('--color-b', e.target.value));
+
+    // --- 2. 텍스트 연동 ---
+    const textMappings = [
+        { input: 'inCodeA', output: 'outCodeA' },
+        { input: 'inRealA', output: 'outRealA' },
+        { input: 'inCodeB', output: 'outCodeB' },
+        { input: 'inRealB', output: 'outRealB' },
+        { input: 'inOpinion', output: 'outOpinion' }
+    ];
+
+    textMappings.forEach(map => {
+        el(map.input).addEventListener('input', () => { el(map.output).textContent = el(map.input).value; });
+    });
+
+    // 등급/속성/종류 조합 함수
+    function updateClassInfoA() {
+        let attr = el('inElementA').value;
+        let attrStr = attr ? attr + '속성 ' : ''; // 속성이 없으면 빈칸
+        el('outInfoA').textContent = el('inClassA').value + '급 ' + attrStr + el('inTypeA').value;
+    }
+    function updateClassInfoB() {
+        let attr = el('inElementB').value;
+        let attrStr = attr ? attr + '속성 ' : '';
+        el('outInfoB').textContent = el('inClassB').value + '급 ' + attrStr + el('inTypeB').value;
+    }
+
+    ['inClassA', 'inElementA', 'inTypeA'].forEach(id => el(id).addEventListener('change', updateClassInfoA));
+    ['inClassB', 'inElementB', 'inTypeB'].forEach(id => el(id).addEventListener('change', updateClassInfoB));
+
+    // 수치 연동
+    el('inSync').addEventListener('input', () => {
+        let val = el('inSync').value;
+        if(val > 100) val = 100;
+        if(val < 0) val = 0;
+        el('outSyncNum').textContent = val + '%';
+        el('outSyncBar').style.width = val + '%';
+    });
+
+    // --- 3. 이미지 업로드 처리 ---
+    function handleImageUpload(inputId, imgId, textId) {
+        el(inputId).addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const img = el(imgId);
+                    img.src = event.target.result;
+                    img.style.display = 'block';
+                    el(textId).style.display = 'none';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    handleImageUpload('inImgA', 'outImgA', 'txtNoImgA');
+    handleImageUpload('inImgB', 'outImgB', 'txtNoImgB');
+
+    // --- 4. 이미지 저장 기능 ---
+    function saveImage() {
+        const area = el('capture-area');
+        const codeA = el('inCodeA').value || 'CharA';
+        const codeB = el('inCodeB').value || 'CharB';
+
+        html2canvas(area, {
+            backgroundColor: '#0c0c0e', 
+            scale: 2, 
+            useCORS: true, 
+            logging: false 
+        }).then(canvas => {
+            const link = document.createElement('a');
+            link.download = `페어배정안내문-${codeA}-${codeB}.png`; 
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        });
+    }
+</script>
+
+</body>
+</html>
