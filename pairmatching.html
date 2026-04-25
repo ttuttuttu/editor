@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>페어 배정 안내문</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+    /* 기본 테마 변수 */
+    :root {
+        --bg-color: #0c0c0e;
+        --panel-bg: #16161a;
+        --card-bg: #1f1f24;
+        --text-main: #f0f0f0;
+        --text-sub: #888;
+        --border: #333;
+        --accent: #9d85ff; 
+    }
+
+    body {
+        margin: 0;
+        padding: 20px;
+        background-color: var(--bg-color);
+        color: var(--text-main);
+        font-family: 'Pretendard', sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .container {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        width: 100%;
+        max-width: 1000px;
+    }
+
+    @media (min-width: 768px) {
+        .container { flex-direction: row; align-items: flex-start; }
+        .editor-section { width: 380px; position: sticky; top: 20px; max-height: 90vh; overflow-y: auto; padding-right: 10px; }
+        .preview-section { flex: 1; }
+    }
+
+    /* 에디터 스크롤바 */
+    .editor-section::-webkit-scrollbar { width: 6px; }
+    .editor-section::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+
+    /* 에디터 스타일 */
+    .editor-section {
+        background: var(--panel-bg);
+        padding: 20px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+    }
+
+    .section-title { font-size: 1rem; color: var(--accent); font-weight: bold; margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 5px; }
+    .form-group { margin-bottom: 15px; }
+    label { display: block; margin-bottom: 6px; font-size: 0.8rem; color: var(--text-sub); }
+    
+    input, textarea, select {
+        width: 100%; padding: 10px; background: #000; border: 1px solid var(--border);
+        color: #fff; border-radius: 6px; box-sizing: border-box; font-family: inherit; font-size: 0.9rem;
+    }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+    
+    /* 드롭다운(select) 가로 배치용 */
+    .select-group { display: flex; gap: 10px; }
+    .select-group select { flex: 1; cursor: pointer; }
+
+    /* 색상 선택기 */
+    .color-picker-group { display: flex; align-items: center; gap: 10px; }
+    input[type="color"] { width: 50px; height: 40px; padding: 2px; border: none; background: none; cursor: pointer; }
+
+    .btn-save {
+        width: 100%; padding: 14px; background: var(--accent); color: #000;
+        border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 1rem;
+        transition: opacity 0.2s;
+    }
+    .btn-save:hover { opacity: 0.9; }
+
+    /* ========================================= */
+    /* 페어틀 미리보기 스타일 (캡쳐 영역) */
+    /* ========================================= */
+    .preview-section {
+        display: flex; flex-direction: column; align-items: center; gap: 15px;
+    }
+
+    #capture-area {
+        background: var(--card-bg);
+        width: 100%;
+        max-width: 500px; 
+        padding: 30px;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        border: 1px solid #2a2a30;
+    }
+
+    .card-header {
+        width: 100%; text-align: center; font-size: 0.85rem; color: var(--text-sub);
+        letter-spacing: 2px; margin-bottom: 25px; border-bottom: 1px solid var(--border); padding-bottom: 10px;
+        font-weight: bold;
+    }
+
+    .profiles-container {
+        display: flex; width: 100%; justify-content: space-between; align-items: flex-start;
+        margin-bottom: 30px; gap: 20px;
+    }
+
+    .profile-block { flex: 1; display: flex; flex-direction: column; align-items: center; width: 45%;}
+
+    /* 사진 프레임: 증명사진 2:3 비율로 수정 */
+    .photo-frame {
+        width: 100%; aspect-ratio: 2 / 3; 
+        background: #111;
+        border: 2px solid var(--border); 
+        border-radius: 8px; /* 모서리를 살짝 더 각지게 조절 */
+        overflow: hidden;
+        margin-bottom: 15px;
+        display: flex; align-items: center; justify-content: center;
+        transition: border-color 0.3s;
+    }
+    .photo-frame.active-border { border-color: var(--accent); } 
+
+    .preview-img { width: 100%; height: 100%; object-fit: cover; display: none; }
+    .no-img-text { color: #444; font-size: 0.8rem; }
+
+    /* 이름 및 등급 정보 스타일 */
+    .name-container { text-align: center; width: 100%;}
+    .code-name { 
+        font-size: 1.4rem; font-weight: 800; letter-spacing: 1px; 
+        text-transform: uppercase; color: var(--text-main); 
+        margin-bottom: 2px;
+        word-break: break-all;
+    }
+    .real-name { font-size: 0.85rem; color: var(--text-sub); }
+    
+    /* 추가된 등급/종류 텍스트 스타일 */
+    .class-info {
+        font-size: 0.8rem;
+        color: var(--accent);
+        font-weight: bold;
+        margin-top: 6px;
+        letter-spacing: 0.5px;
+    }
+
+    /* 중앙 구분선/아이콘 */
+    .profile-separator {
+        display: flex; align-items: center; justify-content: center;
+        height: 200px; /* 길어진 사진 비율에 맞춰 높이 조절 */
+        font-size: 1.5rem; font-weight: bold; color: var(--accent);
+    }
+
+    /* 하단 상태창 & 소견 */
+    .status-box { width: 100%; margin-bottom: 20px; padding: 15px; background: rgba(0,0,0,0.2); border-radius: 10px; box-sizing: border-box;}
+    .status-label { display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 8px; color: var(--text-sub); letter-spacing: 1px;}
+    .bar-bg { width: 100%; height: 8px; background: #000; border-radius: 4px; overflow: hidden; border: 1px solid var(--border);}
+    .bar-fill { height: 100%; background: var(--accent); width: 0%; transition: 0.5s; box-shadow: 0 0 10px var(--accent);}
+
+    .opinion-box { width: 100%; padding-top: 15px; font-size: 0.85rem; line-height: 1.6; color: #ccc; word-break: break-all; }
+    .opinion-title { font-size: 0.75rem; color: var(--accent); margin-bottom: 6px; font-weight: bold; letter-spacing: 1px;}
+</style>
+</head>
+<body>
+
+<div class="container">
+    <div class="editor-section">
+        <h2 style="margin-top:0; margin-bottom:20px;">페어 배정 안내문 <span style="font-size:0.8rem; color:var(--text-sub)">에디터</span></h2>
+        
+        <div class="section-title">SYSTEM SETTINGS</div>
+        <div class="form-group color-picker-group">
+            <label>테마 포인트 색상</label>
+            <input type="color" id="inThemeColor" value="#9d85ff">
+        </div>
+
+        <div class="section-title">CHARACTER A</div>
+        <div class="form-group">
+            <label>프로필 사진 (2:3 비율 권장)</label>
+            <input type="file" id="inImgA" accept="image/*">
+        </div>
+        <div class="form-group">
+            <label>코드네임 (영문)</label>
+            <input type="text" id="inCodeA" value="ECLIPSE">
+        </div>
+        <div class="form-group">
+            <label>본명 (한국어)</label>
+            <input type="text" id="inRealA" value="김철수">
+        </div>
+        <div class="form-group">
+            <label>등급 및 종류</label>
+            <div class="select-group">
+                <select id="inClassA">
+                    <option value="SS">SS급</option>
+                    <option value="S" selected>S급</option>
+                    <option value="A">A급</option>
+                    <option value="B">B급</option>
+                    <option value="C">C급</option>
+                </select>
+                <select id="inTypeA">
+                    <option value="센티넬" selected>센티넬</option>
+                    <option value="가이드">가이드</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="section-title">CHARACTER B</div>
+        <div class="form-group">
+            <label>프로필 사진 (2:3 비율 권장)</label>
+            <input type="file" id="inImgB" accept="image/*">
+        </div>
+        <div class="form-group">
+            <label>코드네임 (영문)</label>
+            <input type="text" id="inCodeB" value="HALO">
+        </div>
+        <div class="form-group">
+            <label>본명 (한국어)</label>
+            <input type="text" id="inRealB" value="이영희">
+        </div>
+        <div class="form-group">
+            <label>등급 및 종류</label>
+            <div class="select-group">
+                <select id="inClassB">
+                    <option value="SS">SS급</option>
+                    <option value="S" selected>S급</option>
+                    <option value="A">A급</option>
+                    <option value="B">B급</option>
+                    <option value="C">C급</option>
+                </select>
+                <select id="inTypeB">
+                    <option value="센티넬">센티넬</option>
+                    <option value="가이드" selected>가이드</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="section-title">PAIR DATA</div>
+        <div class="form-group">
+            <label>파장 일치율 (%)</label>
+            <input type="number" id="inSync" value="92" min="0" max="100">
+        </div>
+        <div class="form-group">
+            <label>비고/소견</label>
+            <textarea id="inOpinion" rows="4">등급 외 각성 센티넬과 S급 가이드의 이례적인 높은 동조율. 각성 직후 폭주 징후를 완벽히 억제함. 지속적인 모니터링 요망.</textarea>
+        </div>
+
+        <button class="btn-save" onclick="saveImage()">안내문 이미지로 저장</button>
+    </div>
+
+    <div class="preview-section">
+        <div id="capture-area">
+            <div class="card-header">페어 배정 안내문</div>
+
+            <div class="profiles-container">
+                <div class="profile-block">
+                    <div class="photo-frame active-border" id="frameA">
+                        <img id="outImgA" class="preview-img" src="" alt="Photo A">
+                        <span class="no-img-text" id="txtNoImgA">NO IMG</span>
+                    </div>
+                    <div class="name-container">
+                        <div class="code-name" id="outCodeA">ECLIPSE</div>
+                        <div class="real-name" id="outRealA">김철수</div>
+                        <div class="class-info" id="outInfoA">S급 센티넬</div>
+                    </div>
+                </div>
+
+                <div class="profile-separator">×</div>
+
+                <div class="profile-block">
+                    <div class="photo-frame active-border" id="frameB">
+                        <img id="outImgB" class="preview-img" src="" alt="Photo B">
+                        <span class="no-img-text" id="txtNoImgB">NO IMG</span>
+                    </div>
+                    <div class="name-container">
+                        <div class="code-name" id="outCodeB">HALO</div>
+                        <div class="real-name" id="outRealB">이영희</div>
+                        <div class="class-info" id="outInfoB">S급 가이드</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="status-box">
+                <div class="status-label">
+                    <span>WAVELENGTH SYNC RATE</span>
+                    <span id="outSyncNum">92%</span>
+                </div>
+                <div class="bar-bg">
+                    <div class="bar-fill" id="outSyncBar" style="width: 92%;"></div>
+                </div>
+            </div>
+
+            <div class="opinion-box">
+                <div class="opinion-title">MANAGEMENT REMARKS / 특이사항</div>
+                <div id="outOpinion">등급 외 각성 센티넬과 S급 가이드의 이례적인 높은 동조율. 각성 직후 폭주 징후를 완벽히 억제함. 지속적인 모니터링 요망.</div>
+            </div>
+        </div>
+        <p style="font-size: 0.8rem; color: #555;">* 저장 시 사진 해상도에 따라 약간의 시간이 걸릴 수 있습니다.</p>
+    </div>
+</div>
+
+<script>
+    const el = (id) => document.getElementById(id);
+
+    // --- 1. 색상 선택 기능 (테마 변경) ---
+    el('inThemeColor').addEventListener('input', (e) => {
+        document.documentElement.style.setProperty('--accent', e.target.value);
+    });
+
+    // --- 2. 텍스트 연동 ---
+    const textMappings = [
+        { input: 'inCodeA', output: 'outCodeA' },
+        { input: 'inRealA', output: 'outRealA' },
+        { input: 'inCodeB', output: 'outCodeB' },
+        { input: 'inRealB', output: 'outRealB' },
+        { input: 'inOpinion', output: 'outOpinion' }
+    ];
+
+    textMappings.forEach(map => {
+        el(map.input).addEventListener('input', () => { el(map.output).textContent = el(map.input).value; });
+    });
+
+    // 등급/종류 셀렉트 박스 연동 함수
+    function updateClassInfoA() {
+        el('outInfoA').textContent = el('inClassA').value + '급 ' + el('inTypeA').value;
+    }
+    function updateClassInfoB() {
+        el('outInfoB').textContent = el('inClassB').value + '급 ' + el('inTypeB').value;
+    }
+
+    el('inClassA').addEventListener('change', updateClassInfoA);
+    el('inTypeA').addEventListener('change', updateClassInfoA);
+    el('inClassB').addEventListener('change', updateClassInfoB);
+    el('inTypeB').addEventListener('change', updateClassInfoB);
+
+    // 수치 연동
+    el('inSync').addEventListener('input', () => {
+        let val = el('inSync').value;
+        if(val > 100) val = 100;
+        if(val < 0) val = 0;
+        el('outSyncNum').textContent = val + '%';
+        el('outSyncBar').style.width = val + '%';
+    });
+
+    // --- 3. 이미지 업로드 처리 ---
+    function handleImageUpload(inputId, imgId, textId) {
+        el(inputId).addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const img = el(imgId);
+                    img.src = event.target.result;
+                    img.style.display = 'block';
+                    el(textId).style.display = 'none';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    handleImageUpload('inImgA', 'outImgA', 'txtNoImgA');
+    handleImageUpload('inImgB', 'outImgB', 'txtNoImgB');
+
+    // --- 4. 이미지 저장 기능 ---
+    function saveImage() {
+        const area = el('capture-area');
+        const codeA = el('inCodeA').value || 'CharA';
+        const codeB = el('inCodeB').value || 'CharB';
+
+        html2canvas(area, {
+            backgroundColor: '#0c0c0e', 
+            scale: 2, 
+            useCORS: true, 
+            logging: false 
+        }).then(canvas => {
+            const link = document.createElement('a');
+            link.download = `페어배정안내문-${codeA}-${codeB}.png`; 
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        });
+    }
+</script>
+
+</body>
+</html>
