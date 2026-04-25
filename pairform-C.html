@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>시스템 페어틀 에디터</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root {
+            --main-bg: #0a0e17; 
+            --text-color: #e0e0e0;
+            --box-info-bg: rgba(18, 24, 38, 0.8);
+            --box-chat-bg: rgba(18, 24, 38, 0.8);
+            --box-nar-bg: rgba(18, 24, 38, 0.8);
+            --accent-a: #00ffff; 
+            --accent-b: #ff0055; 
+        }
+
+        body {
+            background-color: #111;
+            color: var(--text-color);
+            font-family: 'Pretendard', -apple-system, sans-serif;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            transition: background-color 0.3s;
+        }
+
+        /* 컨트롤러 (상단) */
+        .editor-controls {
+            background: #1a1a1a;
+            color: #fff;
+            padding: 20px;
+            border: 1px solid #333;
+            border-top: 3px solid #555;
+            border-radius: 4px;
+            width: 100%;
+            max-width: 1000px;
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            box-sizing: border-box;
+        }
+
+        .control-group { display: flex; flex-direction: column; gap: 8px; }
+        .control-group h3 { 
+            margin: 0 0 10px 0; color: #fff; font-size: 1.1rem; 
+            border-bottom: 1px dashed #555; padding-bottom: 5px; 
+            font-family: 'Courier New', Consolas, monospace; 
+        }
+        .control-group h3::before { content: ">_ "; color: #0f0; }
+        
+        .input-row { display: flex; flex-direction: column; gap: 4px; }
+        .input-row label { font-size: 0.8rem; color: #aaa; font-family: 'Courier New', Consolas, monospace; }
+        
+        input[type="text"], textarea {
+            background: #000; border: 1px solid #333; color: #0f0; 
+            padding: 8px; border-radius: 2px; font-family: inherit;
+        }
+        input[type="text"]:focus, textarea:focus { outline: 1px solid #0f0; border-color: #0f0; }
+        input[type="file"] { font-size: 0.8rem; color: #bbb; }
+        
+        .color-pickers { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 5px; }
+        .color-row { display: flex; align-items: center; gap: 8px; font-size: 0.75rem; color: #ccc; font-family: monospace;}
+        input[type="color"] { width: 28px; height: 28px; border: 1px solid #444; padding: 0; cursor: pointer; background: #000; border-radius: 2px; }
+
+        /* 프리뷰 영역 래퍼 */
+        .preview-wrapper { width: 100%; max-width: 1000px; overflow-x: auto; display: flex; justify-content: center; }
+
+        /* 프리뷰 캔버스 */
+        #capture-area {
+            width: 1000px; height: 600px; min-width: 1000px;
+            background-color: var(--main-bg);
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 20px 20px;
+            color: var(--text-color);
+            display: flex; position: relative;
+            box-shadow: 0 0 30px rgba(0,0,0,0.8), inset 0 0 20px rgba(0,0,0,0.5);
+            border: 1px solid #222;
+        }
+
+        /* 양쪽 날개 (공백 원인 제거) */
+        .wing {
+            width: 220px; height: 100%; position: relative;
+            background-size: cover; background-position: center; background-color: #111;
+            background-repeat: no-repeat;
+        }
+
+        .wing-overlay {
+            position: absolute; bottom: 0; width: 100%; height: 50%;
+            background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.8) 30%, transparent 100%);
+            display: flex; flex-direction: column; justify-content: flex-end;
+            padding: 25px 20px; box-sizing: border-box; color: #fff;
+        }
+
+        .wing .codename { 
+            font-size: 1.4rem; font-weight: 800; letter-spacing: 2px; transition: color 0.3s; 
+            font-family: 'Courier New', Consolas, monospace; 
+            text-transform: uppercase;
+        }
+        .wing-a .codename { color: var(--accent-a); text-shadow: 0 0 8px var(--accent-a); } 
+        .wing-b .codename { color: var(--accent-b); text-shadow: 0 0 8px var(--accent-b); }
+        .wing .realname { font-size: 1.1rem; margin: 6px 0 2px 0; font-weight: bold; }
+        .wing .grade { font-size: 0.85rem; color: #888; font-family: monospace; }
+        .wing .grade::before { content: "[ "; } .wing .grade::after { content: " ]"; }
+
+        /* 중앙 컨텐츠 */
+        .main-content {
+            flex: 1; display: flex; flex-direction: column; padding: 20px; gap: 15px; box-sizing: border-box;
+            position: relative; z-index: 10;
+        }
+
+        .sys-box {
+            background-color: var(--box-info-bg);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 2px; 
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
+        }
+
+        .info-row { display: flex; gap: 15px; min-height: 110px; height: auto; }
+        .info-box {
+            flex: 1; padding: 16px; font-size: 0.9rem; line-height: 1.6;
+            white-space: pre-wrap; word-break: keep-all; display: flex;
+            align-items: center; justify-content: center; text-align: center;
+        }
+        #viewInfoA { border-top: 2px solid var(--accent-a); } 
+        #viewInfoB { border-top: 2px solid var(--accent-b); }
+
+        .chat-area {
+            flex: 1; background-color: var(--box-chat-bg); padding: 15px;
+            display: flex; flex-direction: column; gap: 10px; overflow-y: auto;
+        }
+
+        /* 톡방 내부 말풍선 */
+        .chat-bubble {
+            max-width: 80%; padding: 8px 12px; border-radius: 2px;
+            font-size: 0.9rem; line-height: 1.4; color: #fff; word-break: break-all;
+            transition: all 0.3s;
+        }
+
+        .bubble-a {
+            align-self: flex-start; background-color: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.1); border-left: 3px solid var(--accent-a); 
+        }
+
+        .bubble-b {
+            align-self: flex-end; background-color: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.1); border-right: 3px solid var(--accent-b); 
+            text-align: right;
+        }
+
+        /* A: B: 없이 쳤을 때 나오는 날짜/시스템 텍스트 스타일 (사진 참고 반영) */
+        .bubble-sys {
+            align-self: center; background-color: transparent;
+            font-size: 0.9rem; color: #ffcc00; font-family: 'Courier New', Consolas, monospace;
+            border-top: 1px dashed #555; border-bottom: 1px dashed #555;
+            padding: 8px 20px; border-radius: 0; letter-spacing: 2px; margin: 4px 0;
+        }
+
+        .narrative-area {
+            height: 120px; background-color: var(--box-nar-bg);
+            padding: 15px; font-size: 0.95rem; line-height: 1.6;
+            overflow-y: auto; white-space: pre-wrap;
+            border-bottom: 2px solid #555;
+        }
+
+        .save-btn {
+            margin-top: 25px; padding: 15px 40px;
+            background: #222; color: #0f0; font-size: 1.1rem; font-family: 'Courier New', monospace;
+            border: 1px solid #0f0; border-radius: 2px; cursor: pointer; transition: 0.2s;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
+        }
+        .save-btn:hover { background: #0f0; color: #000; box-shadow: 0 0 20px rgba(0, 255, 0, 0.6); }
+
+        @media (max-width: 768px) {
+            .preview-wrapper { justify-content: flex-start; }
+            body { padding: 10px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="editor-controls">
+    <div class="control-group">
+        <h3>CHAR_A.DAT</h3>
+        <div class="input-row"><label>IMG_UPLOAD</label><input type="file" accept="image/*" onchange="loadImage(event, 'viewImgA')"></div>
+        <div class="input-row"><label>CODENAME</label><input type="text" id="codeA" oninput="update()" value="BLACK BIRD"></div>
+        <div class="input-row"><label>REAL_NAME</label><input type="text" id="nameA" oninput="update()" value="한도윤"></div>
+        <div class="input-row"><label>CLASS_GRADE</label><input type="text" id="gradeA" oninput="update()" value="S-CLASS SENTINEL"></div>
+        <div class="input-row"><label>STATUS_INFO</label><textarea id="infoA" oninput="update()" rows="4">나이: 24세&#13;&#10;성향: 과묵함, 책임감이 강함&#13;&#10;장비: 특수 합금 롱소드&#13;&#10;특이사항: 가이딩 의존도 임계치 도달</textarea></div>
+    </div>
+    
+    <div class="control-group">
+        <h3>CHAR_B.DAT</h3>
+        <div class="input-row"><label>IMG_UPLOAD</label><input type="file" accept="image/*" onchange="loadImage(event, 'viewImgB')"></div>
+        <div class="input-row"><label>CODENAME</label><input type="text" id="codeB" oninput="update()" value="WHITE SWAN"></div>
+        <div class="input-row"><label>REAL_NAME</label><input type="text" id="nameB" oninput="update()" value="이시현"></div>
+        <div class="input-row"><label>CLASS_GRADE</label><input type="text" id="gradeB" oninput="update()" value="SS-CLASS GUIDE"></div>
+        <div class="input-row"><label>STATUS_INFO</label><textarea id="infoB" oninput="update()" rows="4">나이: 22세&#13;&#10;성향: 다정함, 그러나 단호함&#13;&#10;장비: 호신용 은장도&#13;&#10;특이사항: 방사형 가이딩 특화 개체</textarea></div>
+    </div>
+
+    <div class="control-group">
+        <h3>SYSTEM_CONFIG</h3>
+        <div class="input-row">
+            <label>DATALINK_LOG (A: B: 없이 치면 날짜/안내문 스타일로 나옵니다)</label>
+            <textarea id="chatInput" oninput="update()" rows="4">2026년 04월 26일
+A: 가이딩 수치가 안정화되었다.
+B: 무리하지 마세요. 아직 회복 중이니까요.
+작전 구역에 진입합니다.</textarea>
+        </div>
+        <div class="input-row"><label>MAIN_NARRATIVE</label><textarea id="narInput" oninput="update()" rows="2">서로의 결핍을 채워주는 유일한 구원자이자 파트너.</textarea></div>
+        
+        <div class="color-pickers">
+            <div class="color-row"><input type="color" id="c_bg" value="#0a0e17" oninput="updateColors()"> MAIN_BG</div>
+            <div class="color-row"><input type="color" id="c_text" value="#e0e0e0" oninput="updateColors()"> TEXT_COLOR</div>
+            <div class="color-row"><input type="color" id="c_info" value="#121826" oninput="updateColors()"> INFO_BOX</div>
+            <div class="color-row"><input type="color" id="c_chat" value="#121826" oninput="updateColors()"> CHAT_BOX</div>
+            <div class="color-row" style="grid-column: 1 / 3;"><input type="color" id="c_nar" value="#121826" oninput="updateColors()"> NARRATIVE_BOX</div>
+            <div class="color-row"><input type="color" id="c_accent_a" value="#00ffff" oninput="updateColors()"> THEME_A</div>
+            <div class="color-row"><input type="color" id="c_accent_b" value="#ff0055" oninput="updateColors()"> THEME_B</div>
+        </div>
+    </div>
+</div>
+
+<div class="preview-wrapper">
+    <div id="capture-area">
+        <div id="viewImgA" class="wing wing-a">
+            <div class="wing-overlay">
+                <div id="viewCodeA" class="codename">BLACK BIRD</div>
+                <div id="viewNameA" class="realname">한도윤</div>
+                <div id="viewGradeA" class="grade">S-CLASS SENTINEL</div>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <div class="info-row">
+                <div class="info-box sys-box" id="viewInfoA"></div>
+                <div class="info-box sys-box" id="viewInfoB"></div>
+            </div>
+            <div class="chat-area sys-box" id="viewChat"></div>
+            <div class="narrative-area sys-box" id="viewNar"></div>
+        </div>
+
+        <div id="viewImgB" class="wing wing-b">
+            <div class="wing-overlay">
+                <div id="viewCodeB" class="codename">WHITE SWAN</div>
+                <div id="viewNameB" class="realname">이시현</div>
+                <div id="viewGradeB" class="grade">SS-CLASS GUIDE</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<button class="save-btn" onclick="saveAsImage()">[ EXECUTE: SAVE_IMAGE ]</button>
+
+<script>
+    function loadImage(event, targetId) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById(targetId).style.backgroundImage = `url('${e.target.result}')`;
+            }
+            reader.readAsDataURL(file);
+        }
+    }
+
+    function update() {
+        document.getElementById('viewCodeA').innerText = document.getElementById('codeA').value;
+        document.getElementById('viewNameA').innerText = document.getElementById('nameA').value;
+        document.getElementById('viewGradeA').innerText = document.getElementById('gradeA').value;
+        document.getElementById('viewInfoA').innerText = document.getElementById('infoA').value;
+
+        document.getElementById('viewCodeB').innerText = document.getElementById('codeB').value;
+        document.getElementById('viewNameB').innerText = document.getElementById('nameB').value;
+        document.getElementById('viewGradeB').innerText = document.getElementById('gradeB').value;
+        document.getElementById('viewInfoB').innerText = document.getElementById('infoB').value;
+        
+        document.getElementById('viewNar').innerText = document.getElementById('narInput').value;
+
+        const chatInput = document.getElementById('chatInput').value;
+        let chatHTML = '';
+        const lines = chatInput.split('\n');
+        
+        lines.forEach(line => {
+            if (!line.trim()) return;
+            if (line.startsWith('A:') || line.startsWith('a:')) {
+                chatHTML += `<div class="chat-bubble bubble-a">${line.substring(2).trim()}</div>`;
+            } else if (line.startsWith('B:') || line.startsWith('b:')) {
+                chatHTML += `<div class="chat-bubble bubble-b">${line.substring(2).trim()}</div>`;
+            } else {
+                // A:, B: 없이 입력하면 점선 + 노란색 시스템 폰트로 출력 (SYS 문구 없음)
+                chatHTML += `<div class="bubble-sys">${line.trim()}</div>`;
+            }
+        });
+        
+        document.getElementById('viewChat').innerHTML = chatHTML;
+    }
+
+    function updateColors() {
+        const root = document.documentElement;
+        root.style.setProperty('--main-bg', document.getElementById('c_bg').value);
+        root.style.setProperty('--text-color', document.getElementById('c_text').value);
+        root.style.setProperty('--box-info-bg', document.getElementById('c_info').value);
+        root.style.setProperty('--box-chat-bg', document.getElementById('c_chat').value);
+        root.style.setProperty('--box-nar-bg', document.getElementById('c_nar').value);
+        root.style.setProperty('--accent-a', document.getElementById('c_accent_a').value);
+        root.style.setProperty('--accent-b', document.getElementById('c_accent_b').value);
+    }
+
+    function saveAsImage() {
+        const captureDiv = document.getElementById('capture-area');
+        html2canvas(captureDiv, {
+            scale: 2, 
+            backgroundColor: null 
+        }).then(canvas => {
+            const link = document.createElement('a');
+            link.download = 'system_profile.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }).catch(err => {
+            alert("SYSTEM ERROR: 이미지 저장 중 오류가 발생했습니다.");
+            console.error(err);
+        });
+    }
+
+    update();
+</script>
+
+</body>
+</html>
