@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Exchange Editor</title>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0; padding: 20px;
+            background-color: #f0f2f5;
+            font-family: 'Pretendard', 'Malgun Gothic', sans-serif;
+            color: #333;
+        }
+        .app-container {
+            max-width: 1200px; margin: 0 auto;
+            display: flex; flex-direction: column; gap: 20px;
+        }
+
+        /* === 상단: 설정 패널 === */
+        .settings-panel {
+            background: #fff; padding: 20px; border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        .header-toolbar {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #eee;
+        }
+        .save-btn {
+            background: #333; color: #fff; border: none; padding: 12px 24px;
+            border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s;
+        }
+        .save-btn:hover { background: #555; }
+
+        /* 색상 컨트롤 (HEX 코드 입력 지원) */
+        .color-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px; margin-bottom: 20px; background: #f8f9fa; padding: 15px; border-radius: 8px;
+        }
+        .color-control {
+            display: flex; align-items: center; gap: 8px;
+        }
+        .color-control label { font-size: 12px; font-weight: bold; width: 85px; color: #444; }
+        .color-control input[type="color"] {
+            width: 35px; height: 35px; padding: 0; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;
+        }
+        .color-control input[type="text"] {
+            width: 75px; padding: 8px; font-size: 12px; font-family: monospace;
+            border: 1px solid #ccc; border-radius: 4px; text-transform: uppercase;
+        }
+
+        /* 폼 그리드 (에디터 영역) */
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 768px) { .form-grid { grid-template-columns: 1fr; } }
+        .form-card { background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #eaeaea; }
+        .form-card h3 { margin: 0 0 15px 0; font-size: 16px; border-bottom: 2px solid #ddd; padding-bottom: 5px; }
+        
+        .input-group { margin-bottom: 15px; }
+        .input-group label { display: block; font-size: 12px; font-weight: bold; color: #555; margin-bottom: 5px; }
+        .input-group input[type="text"], .input-group textarea {
+            width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box;
+            font-family: inherit; font-size: 14px;
+        }
+        
+        /* 이미지 조절 슬라이더 */
+        .slider-group { display: flex; align-items: center; gap: 10px; margin-top: 5px; font-size: 11px; color: #777; }
+        .slider-group input[type="range"] { flex: 1; }
+
+        /* === 하단: 미리보기 (캡쳐 영역 - 크기 절대 고정) === */
+        .preview-wrapper { width: 100%; overflow-x: auto; padding-bottom: 20px; }
+        
+        /* 🔥 중요: 가로 1200px, 세로 700px 절대 고정 */
+        #capture-area {
+            width: 1200px; height: 700px;
+            background-color: #ffffff;
+            display: flex; border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow: hidden; margin: 0 auto;
+            position: relative; box-sizing: border-box;
+        }
+
+        /* 양옆 세로 배너 */
+        .side-banner {
+            width: 320px; height: 100%;
+            background-color: #eee; background-repeat: no-repeat;
+            position: relative; flex-shrink: 0;
+        }
+        .side-banner::after {
+            content: ''; position: absolute; inset: 0; background: rgba(0,0,0,0.2);
+        }
+        
+        /* 정방향 필기체 이름 (하단 고정, 고급스러운 폰트 적용) */
+        .banner-name {
+            position: absolute; z-index: 2; color: #ffffff;
+            font-family: 'Great Vibes', cursive;
+            font-size: 80px; 
+            font-weight: 400;
+            text-shadow: 0 4px 12px rgba(0,0,0,0.8);
+            bottom: 10px; white-space: nowrap;
+        }
+        #banner-a .banner-name { left: 30px; }
+        #banner-b .banner-name { right: 30px; }
+
+        /* 중앙 콘텐츠 영역 */
+        .center-content {
+            flex: 1; padding: 40px; box-sizing: border-box;
+            display: flex; flex-direction: column; justify-content: space-evenly;
+            background-color: #ffffff;
+        }
+
+        /* 콤팩트 가로형 CD 플레이어 */
+        .compact-player {
+            display: flex; align-items: center; gap: 15px;
+            background-color: #ffffff; padding: 12px 20px; border-radius: 50px;
+            border: 1px solid #eaeaea; box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            width: fit-content; max-width: 380px;
+        }
+        .compact-player.right-align { align-self: flex-end; flex-direction: row-reverse; }
+
+        .cd-shape {
+            width: 65px; height: 65px; border-radius: 50%;
+            background-color: #333; background-size: cover; background-position: center;
+            border: 2px solid #ddd; position: relative; flex-shrink: 0;
+            animation: spin 4s linear infinite;
+        }
+        .cd-shape::after {
+            content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 14px; height: 14px; background: #fff; border-radius: 50%; border: 1px solid #aaa;
+        }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        .p-info { display: flex; flex-direction: column; text-align: left; }
+        .right-align .p-info { text-align: right; }
+        .p-title { font-weight: 800; font-size: 16px; margin-bottom: 2px; color: #333; }
+        .p-artist { font-size: 12px; font-weight: 600; color: #666; }
+
+        /* 말풍선 */
+        .bubble-row { display: flex; width: 100%; }
+        .bubble-row.left { justify-content: flex-start; }
+        .bubble-row.right { justify-content: flex-end; }
+        
+        .chat-bubble {
+            padding: 16px 22px; border-radius: 20px; font-size: 15px; line-height: 1.6;
+            max-width: 85%; box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+            white-space: pre-wrap; word-break: break-word;
+        }
+        .bubble-row.left .chat-bubble { border-bottom-left-radius: 4px; background: #f1f3f5; color: #333; }
+        .bubble-row.right .chat-bubble { border-bottom-right-radius: 4px; background: #333; color: #fff; text-align: left; }
+
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    
+    <div class="settings-panel">
+        <div class="header-toolbar">
+            <h2 style="margin:0; font-size:20px;">🎶 Music Exchange Editor</h2>
+            <button class="save-btn" onclick="downloadImage()">💾 이미지 저장</button>
+        </div>
+
+        <div class="color-grid">
+            <div class="color-control">
+                <label>전체 배경색</label>
+                <input type="color" id="c-bg" value="#ffffff" oninput="syncColor('bg')">
+                <input type="text" id="h-bg" value="#ffffff" oninput="syncHex('bg')">
+            </div>
+            <div class="color-control">
+                <label>CD 플레이어 배경</label>
+                <input type="color" id="c-cdBg" value="#ffffff" oninput="syncColor('cdBg')">
+                <input type="text" id="h-cdBg" value="#ffffff" oninput="syncHex('cdBg')">
+            </div>
+            <div class="color-control">
+                <label>CD 플레이어 글자</label>
+                <input type="color" id="c-cdTxt" value="#333333" oninput="syncColor('cdTxt')">
+                <input type="text" id="h-cdTxt" value="#333333" oninput="syncHex('cdTxt')">
+            </div>
+            <div class="color-control">
+                <label>A 말풍선 배경</label>
+                <input type="color" id="c-bubA" value="#f1f3f5" oninput="syncColor('bubA')">
+                <input type="text" id="h-bubA" value="#f1f3f5" oninput="syncHex('bubA')">
+            </div>
+            <div class="color-control">
+                <label>A 말풍선 글자</label>
+                <input type="color" id="c-txtA" value="#333333" oninput="syncColor('txtA')">
+                <input type="text" id="h-txtA" value="#333333" oninput="syncHex('txtA')">
+            </div>
+            <div class="color-control">
+                <label>B 말풍선 배경</label>
+                <input type="color" id="c-bubB" value="#333333" oninput="syncColor('bubB')">
+                <input type="text" id="h-bubB" value="#333333" oninput="syncHex('bubB')">
+            </div>
+            <div class="color-control">
+                <label>B 말풍선 글자</label>
+                <input type="color" id="c-txtB" value="#ffffff" oninput="syncColor('txtB')">
+                <input type="text" id="h-txtB" value="#ffffff" oninput="syncHex('txtB')">
+            </div>
+        </div>
+
+        <div class="form-grid">
+            <div class="form-card">
+                <h3>Character A (Left)</h3>
+                <div class="input-group">
+                    <label>캐릭터 이름 (하단 정방향 필기체)</label>
+                    <input type="text" id="nameA" value="A" oninput="syncText()">
+                </div>
+                <div class="input-group">
+                    <label>A 사진 (왼쪽 배너)</label>
+                    <input type="file" accept="image/*" onchange="previewImage(this, 'banner-a')">
+                    <div class="slider-group">크기 <input type="range" id="zoomA" min="50" max="250" value="100" oninput="updateBg('a')"></div>
+                    <div class="slider-group">좌우 <input type="range" id="posXA" min="0" max="100" value="50" oninput="updateBg('a')"></div>
+                    <div class="slider-group">상하 <input type="range" id="posYA" min="0" max="100" value="50" oninput="updateBg('a')"></div>
+                </div>
+                <div class="input-group">
+                    <label>CD 커버</label>
+                    <input type="file" accept="image/*" onchange="previewImage(this, 'cd-a')">
+                </div>
+                <div class="input-group">
+                    <label>곡 제목 / 가수명</label>
+                    <div style="display:flex; gap:5px;">
+                        <input type="text" id="songA" value="Will" oninput="syncText()">
+                        <input type="text" id="artistA" value="aimi" oninput="syncText()" style="width:40%;">
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>추천 사유 (엔터키 사용 가능)</label>
+                    <textarea id="reasonA" rows="4" oninput="syncText()">이거 너랑 잘 어울릴 것 같아서 가져왔어.
+시간 날 때 꼭 들어봐.</textarea>
+                </div>
+            </div>
+
+            <div class="form-card">
+                <h3>Character B (Right)</h3>
+                <div class="input-group">
+                    <label>캐릭터 이름 (하단 정방향 필기체)</label>
+                    <input type="text" id="nameB" value="B" oninput="syncText()">
+                </div>
+                <div class="input-group">
+                    <label>B 사진 (오른쪽 배너)</label>
+                    <input type="file" accept="image/*" onchange="previewImage(this, 'banner-b')">
+                    <div class="slider-group">크기 <input type="range" id="zoomB" min="50" max="250" value="100" oninput="updateBg('b')"></div>
+                    <div class="slider-group">좌우 <input type="range" id="posXB" min="0" max="100" value="50" oninput="updateBg('b')"></div>
+                    <div class="slider-group">상하 <input type="range" id="posYB" min="0" max="100" value="50" oninput="updateBg('b')"></div>
+                </div>
+                <div class="input-group">
+                    <label>CD 커버</label>
+                    <input type="file" accept="image/*" onchange="previewImage(this, 'cd-b')">
+                </div>
+                <div class="input-group">
+                    <label>곡 제목 / 가수명</label>
+                    <div style="display:flex; gap:5px;">
+                        <input type="text" id="songB" value="Lights" oninput="syncText()">
+                        <input type="text" id="artistB" value="Aimi" oninput="syncText()" style="width:40%;">
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>추천 사유 (엔터키 사용 가능)</label>
+                    <textarea id="reasonB" rows="4" oninput="syncText()">고마워!
+마침 나도 궁금했던 노래인데 잘 들을게.</textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="preview-wrapper">
+        <div id="capture-area">
+            
+            <div class="side-banner" id="banner-a" style="background-image: url('https://via.placeholder.com/400x800/e0e0e0/999?text=Photo+A'); background-size: 100%; background-position: 50% 50%;">
+                <div class="banner-name" id="view-nameA-banner">A</div>
+            </div>
+
+            <div class="center-content" id="center-bg-target">
+                
+                <div class="compact-player">
+                    <div class="cd-shape" id="cd-a" style="background-image: url('https://via.placeholder.com/100/ccc/fff?text=CD');"></div>
+                    <div class="p-info">
+                        <div class="p-title" id="view-songA">Will</div>
+                        <div class="p-artist" id="view-artistA">Aimi</div>
+                    </div>
+                </div>
+
+                <div class="bubble-row left">
+                    <div class="chat-bubble" id="view-reasonA">이거 너랑 잘 어울릴 것 같아서 가져왔어.
+시간 날 때 꼭 들어봐.</div>
+                </div>
+
+                <div class="bubble-row right">
+                    <div class="chat-bubble" id="view-reasonB">고마워!
+마침 나도 궁금했던 노래인데 잘 들을게.</div>
+                </div>
+
+                <div class="compact-player right-align">
+                    <div class="cd-shape" id="cd-b" style="background-image: url('https://via.placeholder.com/100/ccc/fff?text=CD');"></div>
+                    <div class="p-info">
+                        <div class="p-title" id="view-songB">Lights</div>
+                        <div class="p-artist" id="view-artistB">Aimi</div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="side-banner" id="banner-b" style="background-image: url('https://via.placeholder.com/400x800/e0e0e0/999?text=Photo+B'); background-size: 100%; background-position: 50% 50%;">
+                <div class="banner-name" id="view-nameB-banner">B</div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    // 텍스트 동기화
+    function syncText() {
+        document.getElementById('view-nameA-banner').innerText = document.getElementById('nameA').value || 'A';
+        document.getElementById('view-nameB-banner').innerText = document.getElementById('nameB').value || 'B';
+
+        document.getElementById('view-songA').innerText = document.getElementById('songA').value || '제목';
+        document.getElementById('view-artistA').innerText = document.getElementById('artistA').value || '아티스트';
+        document.getElementById('view-reasonA').innerText = document.getElementById('reasonA').value || '내용 없음';
+
+        document.getElementById('view-songB').innerText = document.getElementById('songB').value || '제목';
+        document.getElementById('view-artistB').innerText = document.getElementById('artistB').value || '아티스트';
+        document.getElementById('view-reasonB').innerText = document.getElementById('reasonB').value || '내용 없음';
+    }
+
+    // 색상 동기화 (컬러피커 조작 시)
+    function syncColor(id) {
+        const val = document.getElementById('c-' + id).value;
+        document.getElementById('h-' + id).value = val; // 텍스트 입력창 업데이트
+        applyColors();
+    }
+
+    // 색상 동기화 (HEX 코드 텍스트 입력 시)
+    function syncHex(id) {
+        const val = document.getElementById('h-' + id).value;
+        // 유효한 HEX 코드인지 확인 후 적용
+        if (/^#[0-9A-F]{6}$/i.test(val)) {
+            document.getElementById('c-' + id).value = val; // 컬러피커 업데이트
+            applyColors();
+        }
+    }
+
+    // 실제 화면에 색상 적용
+    function applyColors() {
+        document.getElementById('center-bg-target').style.backgroundColor = document.getElementById('c-bg').value;
+        
+        // 말풍선 배경색 & 글자색
+        document.getElementById('view-reasonA').style.backgroundColor = document.getElementById('c-bubA').value;
+        document.getElementById('view-reasonA').style.color = document.getElementById('c-txtA').value;
+        
+        document.getElementById('view-reasonB').style.backgroundColor = document.getElementById('c-bubB').value;
+        document.getElementById('view-reasonB').style.color = document.getElementById('c-txtB').value;
+        
+        // CD 플레이어 상자 배경색 변경
+        const cdPlayers = document.querySelectorAll('.compact-player');
+        cdPlayers.forEach(p => p.style.backgroundColor = document.getElementById('c-cdBg').value);
+        
+        // CD 플레이어 글자색 변경
+        const cdTexts = document.querySelectorAll('.p-title, .p-artist');
+        cdTexts.forEach(t => t.style.color = document.getElementById('c-cdTxt').value);
+    }
+
+    // 이미지 파일 업로드
+    function previewImage(input, targetId) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById(targetId).style.backgroundImage = `url('${e.target.result}')`;
+            }
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    // 배너 이미지 크기 및 위치 조정
+    function updateBg(target) {
+        const zoom = document.getElementById('zoom' + target.toUpperCase()).value;
+        const posX = document.getElementById('posX' + target.toUpperCase()).value;
+        const posY = document.getElementById('posY' + target.toUpperCase()).value;
+        
+        const banner = document.getElementById('banner-' + target);
+        banner.style.backgroundSize = zoom + '%';
+        banner.style.backgroundPosition = posX + '% ' + posY + '%';
+    }
+
+    // 이미지 저장 기능
+    function downloadImage() {
+        const target = document.getElementById('capture-area');
+        html2canvas(target, { scale: 2, useCORS: true }).then(canvas => {
+            const link = document.createElement('a');
+            link.download = 'music-exchange-final.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        });
+    }
+
+    // 페이지 로드 시 초기화
+    window.onload = function() {
+        syncText();
+        applyColors();
+    };
+</script>
+
+</body>
+</html>
