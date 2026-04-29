@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Setlog Feed Editor - Ultimate</title>
+<!-- 이미지 캡처를 위한 html2canvas 라이브러리 로드 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+    :root {
+        --bg-color: #f4f5f7;
+        --panel-bg: #ffffff;
+        --border-color: #e1e4e8;
+        --card-empty-bg: #f5f6f8;
+        --text-dark: #333333;
+    }
+
+    body {
+        margin: 0;
+        padding: 20px;
+        font-family: 'Pretendard', -apple-system, sans-serif;
+        background-color: var(--bg-color);
+        color: var(--text-dark);
+    }
+
+    .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid var(--border-color);
+    }
+
+    .header h1 {
+        margin: 0;
+        font-size: 1.5rem;
+    }
+
+    /* 이미지 저장 버튼 스타일 */
+    .save-btn {
+        background: var(--text-dark);
+        color: white;
+        border: none;
+        padding: 10px 18px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 0.95rem;
+        transition: background 0.2s;
+    }
+
+    .save-btn:hover {
+        background: #555;
+    }
+
+    /* 반응형 레이아웃 */
+    .editor-container {
+        display: flex;
+        gap: 20px;
+        flex-direction: column;
+    }
+
+    @media (min-width: 800px) {
+        .editor-container {
+            flex-direction: row;
+        }
+    }
+
+    /* 왼쪽: 제어 패널 */
+    .controls-panel {
+        flex: 1;
+        background: var(--panel-bg);
+        padding: 20px;
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        overflow-y: auto;
+        max-height: 85vh;
+    }
+
+    .control-group {
+        border: 1px solid var(--border-color);
+        padding: 15px;
+        border-radius: 10px;
+        background: #fafafa;
+    }
+
+    .control-group.global {
+        background: #eef2ff;
+        border-color: #c7d2fe;
+    }
+
+    .control-group h3 {
+        margin: 0 0 10px 0;
+        font-size: 1.1rem;
+        border-bottom: 1px dashed #ccc;
+        padding-bottom: 5px;
+    }
+
+    .input-row {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 8px;
+    }
+
+    .input-row > div {
+        flex: 1;
+    }
+    
+    label {
+        display: block;
+        font-size: 0.8rem;
+        font-weight: bold;
+        margin-bottom: 4px;
+        color: #555;
+    }
+
+    input[type="text"], input[type="file"] {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        box-sizing: border-box;
+    }
+
+    .slider-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 0.8rem;
+        margin-bottom: 5px;
+    }
+
+    .slider-group input[type="range"] {
+        flex: 1;
+    }
+
+    /* 오른쪽: 미리보기 패널 */
+    .preview-panel {
+        flex: 1;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+    }
+
+    .mobile-frame {
+        width: 375px; 
+        height: 750px;
+        background: #ffffff;
+        border-radius: 30px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        overflow: hidden; 
+        position: relative;
+        border: 8px solid #333;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* 휴대폰 상태바 */
+    .status-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 20px 5px 20px;
+        font-size: 0.85rem;
+        font-weight: bold;
+        background: white;
+        color: #333;
+        z-index: 101;
+    }
+    .status-icons {
+        letter-spacing: 2px;
+    }
+
+    /* 앱 상단바 UI */
+    .app-topbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 15px;
+        background: white;
+        z-index: 100;
+    }
+
+    .circle-btn {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background-color: #f5f5f5;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-weight: bold;
+        color: #333;
+        font-size: 1.1rem;
+    }
+
+    .right-btns {
+        display: flex;
+        gap: 10px;
+    }
+
+    .room-pill {
+        background-color: #f5f5f5;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-weight: bold;
+        font-size: 0.95rem;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    /* 피드 컨테이너 */
+    .feed-container {
+        padding: 0 15px 15px 15px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px; 
+        flex: 1; 
+    }
+
+    /* 카드 공통 스타일 */
+    .setlog-card {
+        flex: 1; 
+        border-radius: 20px;
+        overflow: hidden;
+        position: relative;
+        background-color: var(--card-empty-bg);
+    }
+
+    /* 빈 상태 (+ 친구 초대) */
+    .empty-state {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        height: 100%;
+        color: #888;
+    }
+
+    .empty-state .plus {
+        font-size: 1.5rem;
+        font-weight: 300;
+        margin-bottom: 5px;
+    }
+
+    .empty-state .text {
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+
+    /* 채워진 상태 */
+    .filled-state {
+        display: none;
+        height: 100%;
+        position: relative;
+    }
+
+    .bg-image {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+    }
+
+    .card-profile {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        z-index: 20;
+    }
+
+    .profile-img {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background-color: #ddd;
+        border: 2px solid white;
+        background-size: cover;
+        background-position: center;
+    }
+
+    .profile-name {
+        color: white;
+        font-weight: bold;
+        font-size: 0.9rem;
+        text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+    }
+
+    .content-overlay {
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        background: rgba(0, 0, 0, 0.2);
+        color: white;
+        z-index: 10;
+        text-shadow: 0 2px 5px rgba(0,0,0,0.8);
+    }
+
+    .content-time {
+        font-weight: 900;
+        letter-spacing: 1px;
+        font-family: 'Arial Black', sans-serif;
+    }
+
+    .content-text {
+        margin-top: 5px;
+        font-weight: bold;
+    }
+    
+    .dots {
+        position: absolute;
+        bottom: 12px;
+        right: 15px;
+        font-size: 1.2rem;
+        color: white;
+        letter-spacing: 2px;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+        z-index: 20;
+    }
+
+    .reaction-area {
+        position: absolute;
+        bottom: 12px;
+        left: 12px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        z-index: 20;
+        display: none; 
+    }
+
+    .reaction-prof-img {
+        width: 20px; 
+        height: 20px;
+        border-radius: 50%;
+        background-color: #ccc;
+        border: 1px solid white;
+        background-size: cover;
+        background-position: center;
+        flex-shrink: 0;
+    }
+
+    .reaction-bubble {
+        background-color: rgba(30, 30, 30, 0.7);
+        color: white;
+        padding: 5px 10px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        max-width: 150px; 
+        word-break: break-word;
+        backdrop-filter: blur(2px);
+    }
+
+    .action-icons {
+        position: absolute;
+        bottom: 12px;
+        right: 15px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px; 
+        z-index: 20;
+    }
+
+    .action-icon {
+        color: white;
+        font-size: 1.1rem;
+        text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+        cursor: pointer;
+    }
+
+    .action-icon.share {
+        font-size: 1.3rem; 
+        transform: rotate(-15deg); 
+    }
+</style>
+</head>
+<body>
+
+<div class="header">
+    <h1>📸 Setlog Pro Editor (4 people)</h1>
+    <!-- 진짜로 캡처되는 이미지 저장 버튼 추가! -->
+    <button class="save-btn" onclick="saveAsImage()">💾 이미지 저장</button>
+</div>
+
+<div class="editor-container">
+    <div class="controls-panel">
+        
+        <div class="control-group global">
+            <h3>⚙️ 공통 설정</h3>
+            <div class="input-row">
+                <div>
+                    <label>상태바 시간</label>
+                    <input type="text" id="globalStatus" value="22:05" oninput="updateGlobalUI()">
+                </div>
+                <div>
+                    <label>방 이름</label>
+                    <input type="text" id="globalRoom" value="🌝 ⌄" oninput="updateGlobalUI()">
+                </div>
+            </div>
+        </div>
+
+        <div id="slotsContainer"></div>
+
+    </div>
+
+    <div class="preview-panel">
+        <!-- 이 영역(captureArea)이 이미지로 저장됨 -->
+        <div class="mobile-frame" id="captureArea">
+            
+            <div class="status-bar">
+                <span id="previewStatus">22:05</span>
+                <span class="status-icons">📶 🔋</span>
+            </div>
+
+            <div class="app-topbar">
+                <div class="circle-btn">&lt;</div>
+                <div class="room-pill" id="previewRoom">🌝 ⌄</div>
+                <div class="right-btns">
+                    <div class="circle-btn">↑</div>
+                    <div class="circle-btn">💬</div>
+                </div>
+            </div>
+            
+            <div class="feed-container" id="feedContainer">
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const totalSlots = 4;
+
+    function initEditor() {
+        const controls = document.getElementById('slotsContainer');
+        const feed = document.getElementById('feedContainer');
+
+        for (let i = 1; i <= totalSlots; i++) {
+            
+            let reactionControls = '';
+            if (i > 1) {
+                reactionControls = `
+                    <div class="input-row" style="margin-top:10px; border-top: 1px dashed #ccc; padding-top: 10px;">
+                        <div>
+                            <label>말풍선 프사 (선택)</label>
+                            <input type="file" id="reactImgFile${i}" accept="image/*" onchange="loadReactImage(event, ${i})">
+                        </div>
+                        <div>
+                            <label>말풍선 내용</label>
+                            <input type="text" id="reactText${i}" placeholder="내용 입력시 활성화" oninput="updateCard(${i})">
+                        </div>
+                    </div>
+                `;
+            }
+
+            controls.innerHTML += `
+                <div class="control-group">
+                    <h3>슬롯 ${i} 설정</h3>
+                    
+                    <div class="input-row">
+                        <div>
+                            <label>프로필 이름</label>
+                            <input type="text" id="profName${i}" value="A" oninput="updateCard(${i})">
+                        </div>
+                        <div>
+                            <label>프로필 사진 (선택)</label>
+                            <input type="file" id="profImgFile${i}" accept="image/*" onchange="loadProfImage(event, ${i})">
+                        </div>
+                    </div>
+
+                    <div class="input-row">
+                        <div>
+                            <label>중앙 시간</label>
+                            <input type="text" id="time${i}" placeholder="22:00" oninput="updateCard(${i})">
+                        </div>
+                        <div>
+                            <label>내용</label>
+                            <input type="text" id="text${i}" placeholder="흠..." oninput="updateCard(${i})">
+                        </div>
+                    </div>
+
+                    <div class="slider-group">
+                        <span>시간 크기</span><input type="range" id="timeSize${i}" min="1" max="4" step="0.1" value="2.2" oninput="updateStyles(${i})">
+                        <span>내용 크기</span><input type="range" id="textSize${i}" min="0.5" max="2" step="0.1" value="0.95" oninput="updateStyles(${i})">
+                    </div>
+
+                    <div class="input-row" style="margin-top:5px;">
+                        <div>
+                            <label>배경 이미지</label>
+                            <input type="file" id="file${i}" accept="image/*" onchange="loadImage(event, ${i})">
+                        </div>
+                    </div>
+                    <div class="slider-group">
+                        <span>크기</span><input type="range" id="scale${i}" min="50" max="200" value="100" oninput="updateStyles(${i})">
+                    </div>
+                    <div class="slider-group">
+                        <span>가로</span><input type="range" id="xpos${i}" min="-100" max="100" value="0" oninput="updateStyles(${i})">
+                    </div>
+                    <div class="slider-group">
+                        <span>세로</span><input type="range" id="ypos${i}" min="-100" max="100" value="0" oninput="updateStyles(${i})">
+                    </div>
+
+                    ${reactionControls}
+                </div>
+            `;
+
+            let cardRightBottomUI = i === 1 ? `<div class="dots">•••</div>` : `
+                <div class="action-icons">
+                    <div class="action-icon share">⮌</div>
+                    <div class="action-icon heart">🤍</div>
+                </div>
+            `;
+
+            let cardLeftBottomUI = i === 1 ? `` : `
+                <div class="reaction-area" id="reactionArea${i}">
+                    <div class="reaction-prof-img" id="previewReactImg${i}"></div>
+                    <div class="reaction-bubble" id="previewReactText${i}"></div>
+                </div>
+            `;
+
+            feed.innerHTML += `
+                <div class="setlog-card" id="card${i}">
+                    <div class="empty-state" id="empty${i}">
+                        <div class="plus">+</div>
+                        <div class="text">친구 초대</div>
+                    </div>
+                    
+                    <div class="filled-state" id="filled${i}">
+                        <div class="bg-image" id="bg${i}" style="background-color: #222;"></div>
+                        
+                        <div class="card-profile">
+                            <div class="profile-img" id="previewProfImg${i}"></div>
+                            <div class="profile-name" id="previewProfName${i}"></div>
+                        </div>
+
+                        <div class="content-overlay">
+                            <div class="content-time" id="previewTime${i}" style="font-size: 2.2rem;"></div>
+                            <div class="content-text" id="previewText${i}" style="font-size: 0.95rem;"></div>
+                        </div>
+                        
+                        ${cardLeftBottomUI}
+                        ${cardRightBottomUI}
+                    </div>
+                </div>
+            `;
+        }
+
+        document.getElementById('time1').value = "22:00";
+        document.getElementById('text1').value = "흠...";
+        updateCard(1);
+
+        document.getElementById('time2').value = "22:01";
+        document.getElementById('text2').value = "집에 가고 싶다";
+        document.getElementById('reactText2').value = "나도...";
+        updateCard(2);
+    }
+
+    function updateGlobalUI() {
+        document.getElementById('previewStatus').innerText = document.getElementById('globalStatus').value;
+        document.getElementById('previewRoom').innerText = document.getElementById('globalRoom').value;
+    }
+
+    function updateCard(i) {
+        const timeVal = document.getElementById(`time${i}`).value;
+        const textVal = document.getElementById(`text${i}`).value;
+        const profNameVal = document.getElementById(`profName${i}`).value;
+        const hasImage = document.getElementById(`bg${i}`).style.backgroundImage !== '';
+
+        const emptyState = document.getElementById(`empty${i}`);
+        const filledState = document.getElementById(`filled${i}`);
+
+        if (timeVal || textVal || hasImage || profNameVal !== "A") {
+            emptyState.style.display = "none";
+            filledState.style.display = "block";
+            
+            document.getElementById(`previewTime${i}`).innerText = timeVal;
+            document.getElementById(`previewText${i}`).innerText = textVal;
+            document.getElementById(`previewProfName${i}`).innerText = profNameVal;
+
+            if (i > 1) {
+                const reactTextVal = document.getElementById(`reactText${i}`).value;
+                const reactionArea = document.getElementById(`reactionArea${i}`);
+                if (reactTextVal) {
+                    reactionArea.style.display = "flex";
+                    document.getElementById(`previewReactText${i}`).innerText = reactTextVal;
+                } else {
+                    reactionArea.style.display = "none";
+                }
+            }
+        } else {
+            emptyState.style.display = "flex";
+            filledState.style.display = "none";
+        }
+    }
+
+    function loadImage(event, i) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById(`bg${i}`).style.backgroundImage = `url(${e.target.result})`;
+                updateCard(i);
+            }
+            reader.readAsDataURL(file);
+        }
+    }
+
+    function loadProfImage(event, i) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById(`previewProfImg${i}`).style.backgroundImage = `url(${e.target.result})`;
+                updateCard(i);
+            }
+            reader.readAsDataURL(file);
+        }
+    }
+
+    function loadReactImage(event, i) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById(`previewReactImg${i}`).style.backgroundImage = `url(${e.target.result})`;
+                updateCard(i); 
+            }
+            reader.readAsDataURL(file);
+        }
+    }
+
+    function updateStyles(i) {
+        const scale = document.getElementById(`scale${i}`).value;
+        const xpos = document.getElementById(`xpos${i}`).value;
+        const ypos = document.getElementById(`ypos${i}`).value;
+        const bgElement = document.getElementById(`bg${i}`);
+        bgElement.style.backgroundSize = `${scale}%`;
+        bgElement.style.backgroundPosition = `calc(50% + ${xpos}px) calc(50% + ${ypos}px)`;
+
+        const timeSize = document.getElementById(`timeSize${i}`).value;
+        const textSize = document.getElementById(`textSize${i}`).value;
+        document.getElementById(`previewTime${i}`).style.fontSize = `${timeSize}rem`;
+        document.getElementById(`previewText${i}`).style.fontSize = `${textSize}rem`;
+    }
+
+    // ⭐ 이미지 저장 기능 추가 ⭐
+    function saveAsImage() {
+        const captureDiv = document.getElementById('captureArea');
+        
+        // 버튼 텍스트 변경으로 사용자에게 진행중임을 알림
+        const btn = document.querySelector('.save-btn');
+        const originalText = btn.innerText;
+        btn.innerText = "저장 중...⏳";
+        
+        html2canvas(captureDiv, {
+            scale: 2, // 고해상도 캡처
+            backgroundColor: null, // 투명한 배경 살리기
+            useCORS: true // 외부 이미지 허용
+        }).then(canvas => {
+            // 임시 링크를 만들어서 다운로드 실행
+            const link = document.createElement('a');
+            link.download = 'setlog_feed.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            
+            // 버튼 텍스트 원상복구
+            btn.innerText = originalText;
+        }).catch(err => {
+            console.error("저장 오류:", err);
+            alert("이미지 저장 중 오류가 발생했습니다 ㅠㅠ");
+            btn.innerText = originalText;
+        });
+    }
+
+    initEditor();
+</script>
+
+</body>
+</html>
