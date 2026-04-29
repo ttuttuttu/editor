@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Setlog Feed Editor - Ultimate</title>
-<!-- 이미지 캡처를 위한 html2canvas 라이브러리 로드 -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
     :root {
@@ -375,27 +374,19 @@
         z-index: 20;
     }
 
+    /* SVG 아이콘 중앙 정렬을 위한 스타일 */
     .action-icon {
-        color: white;
-        font-size: 1.1rem;
-        text-shadow: 0 1px 3px rgba(0,0,0,0.8);
-        cursor: pointer;
-    }
-
-    .action-icon.share {
         display: flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
     }
-
 </style>
 </head>
 <body>
 
 <div class="header">
-    <h1>📸 Setlog Pro Editor (4 people)</h1>
-    <!-- 진짜로 캡처되는 이미지 저장 버튼 추가! -->
+    <h1>📸 Setlog Pro Editor (4 Cards)</h1>
     <button class="save-btn" onclick="saveAsImage()">💾 이미지 저장</button>
 </div>
 
@@ -407,7 +398,7 @@
             <div class="input-row">
                 <div>
                     <label>상태바 시간</label>
-                    <input type="text" id="globalStatus" value="22:05" oninput="updateGlobalUI()">
+                    <input type="text" id="globalStatus" value="U+ 22:05" oninput="updateGlobalUI()">
                 </div>
                 <div>
                     <label>방 이름</label>
@@ -421,11 +412,10 @@
     </div>
 
     <div class="preview-panel">
-        <!-- 이 영역(captureArea)이 이미지로 저장됨 -->
         <div class="mobile-frame" id="captureArea">
             
             <div class="status-bar">
-                <span id="previewStatus">22:05</span>
+                <span id="previewStatus">U+ 22:05</span>
                 <span class="status-icons">📶 🔋</span>
             </div>
 
@@ -520,18 +510,22 @@
                 </div>
             `;
 
+            // SVG가 적용된 우측 하단 아이콘 (공유 화살표 + 윤곽선 하트)
             let cardRightBottomUI = i === 1 ? `<div class="dots">•••</div>` : `
                 <div class="action-icons">
                     <div class="action-icon share">
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));">
-                            <path d="M10 9l-6 6 6 6"></path>
-                            <path d="M20 4v7a4 4 0 0 1-4 4H4"></path>
+                            <polyline points="9 14 4 9 9 4"></polyline>
+                            <path d="M20 20v-7a4 4 0 0 0-4-4H4"></path>
                         </svg>
                     </div>
-                    <div class="action-icon heart">🤍</div>
+                    <div class="action-icon heart">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));">
+                          <path d="M20.8 4.6c-1.8-1.8-4.7-1.8-6.5 0l-0.3 0.3-0.3-0.3c-1.8-1.8-4.7-1.8-6.5 0-1.8 1.8-1.8 4.7 0 6.5l0.3 0.3 6.5 6.5 6.5-6.5 0.3-0.3c1.8-1.8 1.8-4.7 0-6.5z"></path>
+                        </svg>
+                    </div>
                 </div>
             `;
-
 
             let cardLeftBottomUI = i === 1 ? `` : `
                 <div class="reaction-area" id="reactionArea${i}">
@@ -665,27 +659,21 @@
         document.getElementById(`previewText${i}`).style.fontSize = `${textSize}rem`;
     }
 
-    // ⭐ 이미지 저장 기능 추가 ⭐
     function saveAsImage() {
         const captureDiv = document.getElementById('captureArea');
-        
-        // 버튼 텍스트 변경으로 사용자에게 진행중임을 알림
         const btn = document.querySelector('.save-btn');
         const originalText = btn.innerText;
         btn.innerText = "저장 중...⏳";
         
         html2canvas(captureDiv, {
-            scale: 2, // 고해상도 캡처
-            backgroundColor: null, // 투명한 배경 살리기
-            useCORS: true // 외부 이미지 허용
+            scale: 2, 
+            backgroundColor: null, 
+            useCORS: true 
         }).then(canvas => {
-            // 임시 링크를 만들어서 다운로드 실행
             const link = document.createElement('a');
             link.download = 'setlog_feed.png';
             link.href = canvas.toDataURL('image/png');
             link.click();
-            
-            // 버튼 텍스트 원상복구
             btn.innerText = originalText;
         }).catch(err => {
             console.error("저장 오류:", err);
@@ -699,3 +687,4 @@
 
 </body>
 </html>
+
