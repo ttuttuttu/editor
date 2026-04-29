@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Setlog Feed Editor</title>
+<title>Setlog Feed Editor - Ultimate</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
     :root {
@@ -352,9 +352,10 @@
         flex-shrink: 0;
     }
 
+    /* ⭐ 말풍선 글자색 연한 흰색으로 변경 ⭐ */
     .reaction-bubble {
         background-color: rgba(30, 30, 30, 0.7);
-        color: white;
+        color: rgba(255, 255, 255, 0.85); /* 기존 완전 흰색(white)에서 연한 흰색으로 변경 */
         padding: 5px 10px;
         border-radius: 12px;
         font-size: 0.75rem;
@@ -374,19 +375,20 @@
         z-index: 20;
     }
 
-    /* SVG 아이콘 중앙 정렬을 위한 스타일 */
+    /* SVG 아이콘 캡처 오류 방지를 위해 CSS 그림자로 교체 */
     .action-icon {
         display: flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
+        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8)); /* HTML 내장 필터 대신 CSS로 처리 */
     }
 </style>
 </head>
 <body>
 
 <div class="header">
-    <h1>📸 Setlog Pro Editor (4 people)</h1>
+    <h1>📸 Setlog Pro Editor (4 Cards)</h1>
     <button class="save-btn" onclick="saveAsImage()">💾 이미지 저장</button>
 </div>
 
@@ -398,7 +400,7 @@
             <div class="input-row">
                 <div>
                     <label>상태바 시간</label>
-                    <input type="text" id="globalStatus" value="22:05" oninput="updateGlobalUI()">
+                    <input type="text" id="globalStatus" value="U+ 22:05" oninput="updateGlobalUI()">
                 </div>
                 <div>
                     <label>방 이름</label>
@@ -415,7 +417,7 @@
         <div class="mobile-frame" id="captureArea">
             
             <div class="status-bar">
-                <span id="previewStatus">22:05</span>
+                <span id="previewStatus">U+ 22:05</span>
                 <span class="status-icons">📶 🔋</span>
             </div>
 
@@ -510,17 +512,17 @@
                 </div>
             `;
 
-            // SVG가 적용된 우측 하단 아이콘 (공유 화살표 + 윤곽선 하트)
+            // ⭐ 에러 방지용 네임스페이스(xmlns) 추가된 SVG 코드 ⭐
             let cardRightBottomUI = i === 1 ? `<div class="dots">•••</div>` : `
                 <div class="action-icons">
                     <div class="action-icon share">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                             <polyline points="9 14 4 9 9 4"></polyline>
                             <path d="M20 20v-7a4 4 0 0 0-4-4H4"></path>
                         </svg>
                     </div>
                     <div class="action-icon heart">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                           <path d="M20.8 4.6c-1.8-1.8-4.7-1.8-6.5 0l-0.3 0.3-0.3-0.3c-1.8-1.8-4.7-1.8-6.5 0-1.8 1.8-1.8 4.7 0 6.5l0.3 0.3 6.5 6.5 6.5-6.5 0.3-0.3c1.8-1.8 1.8-4.7 0-6.5z"></path>
                         </svg>
                     </div>
@@ -665,10 +667,12 @@
         const originalText = btn.innerText;
         btn.innerText = "저장 중...⏳";
         
+        // svg 랜더링 버그를 줄이기 위한 추가 옵션 세팅
         html2canvas(captureDiv, {
             scale: 2, 
             backgroundColor: null, 
-            useCORS: true 
+            useCORS: true,
+            allowTaint: true
         }).then(canvas => {
             const link = document.createElement('a');
             link.download = 'setlog_feed.png';
@@ -687,4 +691,3 @@
 
 </body>
 </html>
-
