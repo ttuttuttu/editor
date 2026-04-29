@@ -383,9 +383,12 @@
     }
 
     .action-icon.share {
-        font-size: 1.3rem; 
-        transform: rotate(-15deg); 
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
     }
+
 </style>
 </head>
 <body>
@@ -519,10 +522,16 @@
 
             let cardRightBottomUI = i === 1 ? `<div class="dots">•••</div>` : `
                 <div class="action-icons">
-                    <div class="action-icon share">⮌</div>
+                    <div class="action-icon share">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));">
+                            <path d="M10 9l-6 6 6 6"></path>
+                            <path d="M20 4v7a4 4 0 0 1-4 4H4"></path>
+                        </svg>
+                    </div>
                     <div class="action-icon heart">🤍</div>
                 </div>
             `;
+
 
             let cardLeftBottomUI = i === 1 ? `` : `
                 <div class="reaction-area" id="reactionArea${i}">
