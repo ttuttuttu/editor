@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>캐릭터 특징 에디터 메이커 (모바일 커서 버그 완벽 수정판)</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Jua&family=Nanum+Pen+Script&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+    <style>
+        @font-face { font-family: 'Paperlogy'; src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/Project-Noonnu-Project-Noonnu@v1.0/Paperlogy-Regular.woff2') format('woff2'); }
+        @font-face { font-family: 'GmarketSans'; src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/GmarketSansMedium.woff') format('woff'); }
+        @font-face { font-family: 'Maplestory'; src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_20-04@2.1/MaplestoryOTFLight.woff') format('woff'); }
+        @font-face { font-family: 'Jalnan'; src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_four@1.2/JalnanOTF00.woff') format('woff'); }
+        @font-face { font-family: 'KCCEunyoung'; src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_one@1.0/KCC-eunyoung.woff') format('woff'); }
+    </style>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Pretendard', sans-serif;
+            background-color: #e9ecef;
+            margin: 0; padding: 20px;
+            display: flex; gap: 20px; height: 100vh;
+            box-sizing: border-box; overflow: hidden;
+        }
+
+        .toolbar {
+            width: 280px; background: #fff; padding: 20px; border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 20px; overflow-y: auto;
+            flex-shrink: 0;
+        }
+
+        .tool-group { display: flex; flex-direction: column; gap: 10px; padding-bottom: 15px; border-bottom: 1px dashed #dee2e6; }
+        .tool-group:last-child { border-bottom: none; }
+        .tool-group label { font-size: 0.9rem; font-weight: bold; color: #495057; }
+
+        button, input[type="file"], select, input[type="number"], input[type="range"], input[type="color"], input[type="text"] {
+            padding: 10px; border: 1px solid #ced4da; border-radius: 8px; font-size: 0.95rem; cursor: pointer; background: #f8f9fa;
+        }
+
+        button.primary { background-color: #339af0; color: white; border: none; font-weight: bold; }
+        button.primary:hover { background-color: #228be6; }
+        button.success { background-color: #40c057; color: white; border: none; font-weight: bold; }
+        button.success:hover { background-color: #37b24d; }
+
+        .text-controls { display: flex; gap: 5px; align-items: center; }
+        .text-controls button { flex: 1; font-weight: bold; }
+        
+        .color-wrap { display: flex; gap: 5px; }
+        .color-wrap input[type="color"] { flex: 1; padding: 2px; height: 40px; cursor: pointer; }
+        .color-wrap input[type="text"] { flex: 2; text-align: center; font-family: monospace; }
+
+        .workspace-container {
+            flex: 1; display: flex; overflow: auto;
+            background: #ced4da; border-radius: 15px; box-shadow: inset 0 4px 10px rgba(0,0,0,0.1); padding: 40px;
+        }
+
+        .canvas {
+            margin: auto; flex-shrink: 0; 
+            width: 800px; height: 600px; background-color: #ffffff; position: relative;
+            overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.2); transition: width 0.3s, height 0.3s;
+        }
+
+        #bgBlur {
+            position: absolute; top: -10%; left: -10%; width: 120%; height: 120%; 
+            background-size: cover; background-position: center; filter: blur(25px); opacity: 0.5; z-index: 0; display: none; pointer-events: none;
+        }
+
+        #svgCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
+
+        #charImage {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 50%; height: auto; z-index: 1; display: none; border-radius: 10px; box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        }
+
+        .text-box {
+            position: absolute; background-color: #fff; border: 2px solid #333; border-radius: 8px;
+            cursor: move; z-index: 10; min-width: 100px; min-height: 50px; resize: both; overflow: hidden;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        .pin-point {
+            position: absolute; width: 12px; height: 12px; background-color: #fff; border: 3px solid #333;
+            border-radius: 50%; cursor: move; z-index: 10; transform: translate(-50%, -50%);
+        }
+
+        .bubble-input {
+            width: 100%; padding: 10px; border: none; background: transparent; outline: none;
+            text-align: center; font-size: 16px; line-height: 1.4; white-space: pre-wrap; word-break: keep-all; cursor: text;
+        }
+
+        .bubble-input:empty:before { content: attr(data-placeholder); color: #adb5bd; }
+
+        .close-btn {
+            position: absolute; top: -12px; right: -12px; width: 24px; height: 24px;
+            background-color: #fa5252; border: 2px solid #333; border-radius: 50%;
+            color: #fff; font-size: 12px; font-weight: bold; display: flex;
+            justify-content: center; align-items: center; cursor: pointer; z-index: 11;
+        }
+
+        .hide-on-save { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <div class="toolbar">
+        <div class="tool-group">
+            <label>0. 캔버스 크기 및 비율</label>
+            <select id="canvasOrientation" onchange="changeCanvasSize()">
+                <option value="landscape_std">표준 가로 (800 x 600)</option>
+                <option value="portrait_std">표준 세로 (600 x 800)</option>
+                <option value="landscape_lg">대형 가로 (1200 x 900)</option>
+                <option value="portrait_lg">대형 세로 (900 x 1200)</option>
+            </select>
+        </div>
+
+        <div class="tool-group">
+            <label>1. 캐릭터 이미지 삽입</label>
+            <input type="file" id="imageUpload" accept="image/*">
+            <label style="margin-top: 10px;">이미지 크기 조절</label>
+            <input type="range" id="imageSize" min="10" max="150" value="50">
+        </div>
+
+        <div class="tool-group">
+            <label>2. 텍스트 박스 추가</label>
+            <button class="primary" onclick="addTextBox()">+ 텍스트 박스 추가</button>
+            <small style="color: #868e96; font-size: 0.75rem;">모서리를 잡고 크기 조절이 가능합니다.</small>
+        </div>
+
+        <div class="tool-group">
+            <label>3. 텍스트 꾸미기</label>
+            <small style="color: #e03131; font-size: 0.8rem; font-weight:bold;">원하는 글자만 드래그해서 폰트나 색상을 바꿀 수 있습니다!</small>
+            
+            <select id="fontFamily" onchange="applyFormat('fontName', this.value)">
+                <option value="'Pretendard', sans-serif">프리텐다드</option>
+                <option value="'Paperlogy', sans-serif">페이퍼로지</option>
+                <option value="'GmarketSans', sans-serif">지마켓 산스</option>
+                <option value="'Maplestory', sans-serif">메이플스토리</option>
+                <option value="'Jalnan', sans-serif">여기어때 잘난체</option>
+                <option value="'Noto Sans KR', sans-serif">본고딕</option>
+                <option value="'Jua', sans-serif">주아체</option>
+                <option value="'Nanum Pen Script', cursive">나눔 펜글씨</option>
+                <option value="'KCCEunyoung', cursive">KCC 은영체</option>
+            </select>
+            
+            <div class="color-wrap">
+                <input type="color" id="fontColorPicker" value="#000000" onchange="syncColor('picker')" title="글자 색상 팔레트">
+                <input type="text" id="fontColorHex" value="#000000" oninput="syncColor('hex')" placeholder="#000000" title="헥스 코드 직접 입력">
+            </div>
+
+            <div class="text-controls">
+                <input type="number" id="fontSize" value="16" min="10" max="80" onchange="applyFormat('fontSize', this.value)" title="글자 크기">
+                <button onmousedown="event.preventDefault(); applyFormat('bold')" title="굵게">B</button>
+                <button onmousedown="event.preventDefault(); applyFormat('italic')" title="기울기">I</button>
+            </div>
+        </div>
+
+        <div class="tool-group" style="margin-top: auto;">
+            <label>4. 저장</label>
+            <button class="success" onclick="saveImage()">이미지 다운로드</button>
+        </div>
+    </div>
+
+    <div class="workspace-container">
+        <div class="canvas" id="canvasArea">
+            <div id="bgBlur"></div>
+            <svg id="svgCanvas"></svg>
+            <img id="charImage" src="" alt="업로드된 이미지">
+        </div>
+    </div>
+
+    <script>
+        const canvasArea = document.getElementById('canvasArea');
+        const svgCanvas = document.getElementById('svgCanvas');
+        const charImage = document.getElementById('charImage');
+        const bgBlur = document.getElementById('bgBlur');
+        const imageSizeSlider = document.getElementById('imageSize');
+        let boxCount = 0;
+        let activeTextarea = null;
+
+        function changeCanvasSize() {
+            const option = document.getElementById('canvasOrientation').value;
+            let width, height;
+            switch (option) {
+                case 'landscape_std': width = '800px'; height = '600px'; break;
+                case 'portrait_std': width = '600px'; height = '800px'; break;
+                case 'landscape_lg': width = '1200px'; height = '900px'; break;
+                case 'portrait_lg': width = '900px'; height = '1200px'; break;
+            }
+            if (width && height) {
+                canvasArea.style.width = width; canvasArea.style.height = height;
+            }
+            setTimeout(() => {
+                document.querySelectorAll('.text-box').forEach(box => {
+                    if (box.updateLineCallback) box.updateLineCallback();
+                });
+            }, 300);
+        }
+
+        document.getElementById('imageUpload').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    charImage.src = event.target.result; charImage.style.display = 'block';
+                    bgBlur.style.backgroundImage = `url(${event.target.result})`; bgBlur.style.display = 'block';
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+
+        imageSizeSlider.addEventListener('input', function(e) { charImage.style.width = e.target.value + '%'; });
+
+        function addTextBox() {
+            const boxId = `box-${boxCount++}`;
+            const box = document.createElement('div');
+            box.classList.add('text-box');
+            box.id = boxId;
+
+            const input = document.createElement('div');
+            input.classList.add('bubble-input');
+            input.setAttribute('contenteditable', 'true');
+            input.setAttribute('data-placeholder', '내용 입력...');
+            input.style.fontFamily = document.getElementById('fontFamily').value;
+            input.style.fontSize = document.getElementById('fontSize').value + 'px';
+            input.style.color = document.getElementById('fontColorHex').value;
+            
+            input.addEventListener('focus', function() { activeTextarea = this; });
+
+            const pin = document.createElement('div');
+            pin.classList.add('pin-point');
+            
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('stroke', '#333'); line.setAttribute('stroke-width', '2.5'); line.setAttribute('stroke-dasharray', '6,4');
+            svgCanvas.appendChild(line);
+
+            const closeBtn = document.createElement('div');
+            closeBtn.classList.add('close-btn'); closeBtn.innerText = '✕';
+
+            box.appendChild(closeBtn); box.appendChild(input);
+            canvasArea.appendChild(box); canvasArea.appendChild(pin);
+
+            box.style.left = '50px'; box.style.top = '50px';
+            pin.style.left = '200px'; pin.style.top = '150px';
+
+            function updateLine() {
+                line.setAttribute('x1', box.offsetLeft + (box.offsetWidth / 2));
+                line.setAttribute('y1', box.offsetTop + (box.offsetHeight / 2));
+                line.setAttribute('x2', pin.offsetLeft);
+                line.setAttribute('y2', pin.offsetTop);
+            }
+            
+            box.updateLineCallback = updateLine;
+            
+            const resizeObserver = new ResizeObserver(() => updateLine());
+            resizeObserver.observe(box);
+
+            closeBtn.onclick = function() { resizeObserver.disconnect(); box.remove(); pin.remove(); line.remove(); };
+
+            makeDraggable(box, updateLine);
+            makeDraggable(pin, updateLine);
+            
+            setTimeout(updateLine, 10); 
+        }
+
+        function syncColor(source) {
+            const picker = document.getElementById('fontColorPicker');
+            const hexText = document.getElementById('fontColorHex');
+            
+            if (source === 'picker') {
+                hexText.value = picker.value.toUpperCase();
+                applyFormat('foreColor', picker.value);
+            } else if (source === 'hex') {
+                let val = hexText.value.trim();
+                if (!val.startsWith('#')) val = '#' + val;
+                
+                if (/^#[0-9A-F]{6}$/i.test(val)) {
+                    picker.value = val;
+                    applyFormat('foreColor', val);
+                }
+            }
+        }
+
+        function applyFormat(command, value) {
+            const selection = window.getSelection();
+            
+            if (selection.rangeCount > 0 && selection.toString().length > 0) {
+                document.execCommand('styleWithCSS', false, true);
+                
+                if (command === 'fontSize') {
+                    document.execCommand('fontSize', false, '7');
+                    document.querySelectorAll('span, font').forEach(el => {
+                        if (el.getAttribute('size') === '7' || el.style.fontSize === 'xxx-large' || el.style.fontSize === '-webkit-xxx-large') {
+                            el.removeAttribute('size');
+                            el.style.fontSize = value + 'px';
+                        }
+                    });
+                } else {
+                    document.execCommand(command, false, value);
+                }
+            } 
+            else if (activeTextarea) {
+                if (command === 'bold') {
+                    activeTextarea.style.fontWeight = (activeTextarea.style.fontWeight === 'bold') ? 'normal' : 'bold';
+                } else if (command === 'italic') {
+                    activeTextarea.style.fontStyle = (activeTextarea.style.fontStyle === 'italic') ? 'normal' : 'italic';
+                } else if (command === 'fontSize') {
+                    activeTextarea.style.fontSize = value + 'px';
+                } else if (command === 'fontName') {
+                    activeTextarea.style.fontFamily = value;
+                } else if (command === 'foreColor') {
+                    activeTextarea.style.color = value;
+                }
+            }
+
+            if (activeTextarea && activeTextarea.parentElement && activeTextarea.parentElement.updateLineCallback) {
+                activeTextarea.parentElement.updateLineCallback();
+            }
+        }
+
+        // 💡 드래그 이벤트 수정: 모바일/PC 완벽 호환 및 커서 간섭 해결
+        function makeDraggable(element, onDragCallback) {
+            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+            // 터치 환경에서도 정밀하게 동작하도록 onpointerdown 사용
+            element.onpointerdown = dragMouseDown;
+
+            function dragMouseDown(e) {
+                // 핵심: isContentEditable 속성을 사용해서, 내부 글자 중 색/크기가 바뀐 스팬(span)을 눌러도 정상적으로 글자 편집 모드가 되도록 함
+                if (e.target.isContentEditable || e.target.classList.contains('close-btn')) return;
+                
+                if (element.classList.contains('text-box')) {
+                    const rect = element.getBoundingClientRect();
+                    const isResizeCorner = (e.clientX >= rect.right - 20) && (e.clientY >= rect.bottom - 20);
+                    if (isResizeCorner) return; 
+                }
+
+                e.preventDefault(); // 스크롤 등 기본 동작 방지
+                pos3 = e.clientX; 
+                pos4 = e.clientY;
+                document.onpointerup = closeDragElement; 
+                document.onpointermove = elementDrag;
+            }
+
+            function elementDrag(e) {
+                e.preventDefault();
+                pos1 = pos3 - e.clientX; pos2 = pos4 - e.clientY;
+                pos3 = e.clientX; pos4 = e.clientY;
+                element.style.top = (element.offsetTop - pos2) + "px";
+                element.style.left = (element.offsetLeft - pos1) + "px";
+                if(onDragCallback) onDragCallback(); 
+            }
+
+            function closeDragElement() { 
+                document.onpointerup = null; 
+                document.onpointermove = null; 
+            }
+        }
+
+        function saveImage() {
+            document.querySelectorAll('.close-btn').forEach(btn => btn.classList.add('hide-on-save'));
+            html2canvas(document.getElementById('canvasArea'), { scale: 2, backgroundColor: '#ffffff' }).then(canvas => {
+                const link = document.createElement('a'); link.download = 'Character_Maker_Result.png'; link.href = canvas.toDataURL('image/png'); link.click();
+                document.querySelectorAll('.close-btn').forEach(btn => btn.classList.remove('hide-on-save'));
+            });
+        }
+    </script>
+</body>
+</html>
