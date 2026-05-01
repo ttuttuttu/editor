@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>캐릭터 특징 에디터 메이커</title>
+    <title>캐릭터 특징 에디터 메이커 (모바일 최적화판)</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Jua&family=Nanum+Pen+Script&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
@@ -18,18 +18,20 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     
     <style>
+        /* 💡 기본 레이아웃 변경: 스크롤이 가능하도록 수정 */
         body {
             font-family: 'Pretendard', sans-serif;
             background-color: #e9ecef;
             margin: 0; padding: 20px;
-            display: flex; gap: 20px; height: 100vh;
-            box-sizing: border-box; overflow: hidden;
+            display: flex; gap: 20px; 
+            min-height: 100vh;
+            box-sizing: border-box;
         }
 
         .toolbar {
             width: 280px; background: #fff; padding: 20px; border-radius: 15px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 20px; overflow-y: auto;
-            flex-shrink: 0;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 20px; 
+            flex-shrink: 0; height: fit-content;
         }
 
         .tool-group { display: flex; flex-direction: column; gap: 10px; padding-bottom: 15px; border-bottom: 1px dashed #dee2e6; }
@@ -54,13 +56,16 @@
 
         .workspace-container {
             flex: 1; display: flex; overflow: auto;
-            background: #ced4da; border-radius: 15px; box-shadow: inset 0 4px 10px rgba(0,0,0,0.1); padding: 40px;
+            background: #ced4da; border-radius: 15px; box-shadow: inset 0 4px 10px rgba(0,0,0,0.1); padding: 20px;
+            align-items: center; justify-content: center;
         }
 
         .canvas {
             margin: auto; flex-shrink: 0; 
             width: 800px; height: 600px; background-color: #ffffff; position: relative;
-            overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.2); transition: width 0.3s, height 0.3s;
+            overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.2); 
+            transition: width 0.3s, height 0.3s, transform 0.2s; /* 부드러운 줌 효과 */
+            transform-origin: center center;
         }
 
         #bgBlur {
@@ -101,19 +106,41 @@
         }
 
         .hide-on-save { display: none !important; }
+
+        /* 💡 모바일 환경(화면 너비 800px 이하) 반응형 디자인 */
+        @media (max-width: 800px) {
+            body {
+                flex-direction: column; /* 툴바와 캔버스를 위아래로 배치 */
+                padding: 10px;
+            }
+            .toolbar {
+                width: 100%;
+                order: 2; /* 툴바를 캔버스 아래로 */
+            }
+            .workspace-container {
+                width: 100%;
+                height: 50vh; /* 캔버스 영역이 화면의 50%를 차지하도록 설정 */
+                min-height: 350px;
+                order: 1; /* 캔버스를 위로 */
+                padding: 10px;
+            }
+        }
     </style>
 </head>
 <body>
 
     <div class="toolbar">
         <div class="tool-group">
-            <label>0. 캔버스 크기 및 비율</label>
+            <label>0. 캔버스 설정</label>
             <select id="canvasOrientation" onchange="changeCanvasSize()">
                 <option value="landscape_std">표준 가로 (800 x 600)</option>
                 <option value="portrait_std">표준 세로 (600 x 800)</option>
                 <option value="landscape_lg">대형 가로 (1200 x 900)</option>
                 <option value="portrait_lg">대형 세로 (900 x 1200)</option>
             </select>
+            
+            <label style="margin-top: 10px; color: #1c7ed6;">🔍 미리보기 배율 (작업용)</label>
+            <input type="range" id="canvasZoom" min="0.3" max="1.5" step="0.1" value="1" oninput="changeZoom()" title="화면 확대/축소">
         </div>
 
         <div class="tool-group">
@@ -179,6 +206,21 @@
         const imageSizeSlider = document.getElementById('imageSize');
         let boxCount = 0;
         let activeTextarea = null;
+        let currentZoom = 1; // 💡 현재 줌 배율을 저장하는 변수
+
+        // 💡 줌 슬라이더 기능
+        function changeZoom() {
+            currentZoom = document.getElementById('canvasZoom').value;
+            canvasArea.style.transform = `scale(${currentZoom})`;
+        }
+
+        // 모바일 접속 시 자동으로 보기 좋게 0.5배율로 세팅
+        window.onload = function() {
+            if (window.innerWidth <= 800) {
+                document.getElementById('canvasZoom').value = 0.4;
+                changeZoom();
+            }
+        };
 
         function changeCanvasSize() {
             const option = document.getElementById('canvasOrientation').value;
@@ -320,50 +362,60 @@
             }
         }
 
-        // 💡 드래그 이벤트 수정: 모바일/PC 완벽 호환 및 커서 간섭 해결
+        // 💡 줌 상태에서도 드래그가 정상 작동하도록 수식에 currentZoom 반영!
         function makeDraggable(element, onDragCallback) {
             let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-            // 터치 환경에서도 정밀하게 동작하도록 onpointerdown 사용
             element.onpointerdown = dragMouseDown;
 
             function dragMouseDown(e) {
-                // 핵심: isContentEditable 속성을 사용해서, 내부 글자 중 색/크기가 바뀐 스팬(span)을 눌러도 정상적으로 글자 편집 모드가 되도록 함
                 if (e.target.isContentEditable || e.target.classList.contains('close-btn')) return;
                 
                 if (element.classList.contains('text-box')) {
                     const rect = element.getBoundingClientRect();
-                    const isResizeCorner = (e.clientX >= rect.right - 20) && (e.clientY >= rect.bottom - 20);
+                    // 배율에 맞춰 모서리 인식 범위 조정
+                    const isResizeCorner = (e.clientX >= rect.right - (20 * currentZoom)) && (e.clientY >= rect.bottom - (20 * currentZoom));
                     if (isResizeCorner) return; 
                 }
 
-                e.preventDefault(); // 스크롤 등 기본 동작 방지
-                pos3 = e.clientX; 
-                pos4 = e.clientY;
-                document.onpointerup = closeDragElement; 
-                document.onpointermove = elementDrag;
+                e.preventDefault();
+                pos3 = e.clientX; pos4 = e.clientY;
+                document.onpointerup = closeDragElement; document.onpointermove = elementDrag;
             }
 
             function elementDrag(e) {
                 e.preventDefault();
-                pos1 = pos3 - e.clientX; pos2 = pos4 - e.clientY;
+                // 💡 화면이 축소/확대된 만큼 마우스 이동 거리를 보정해줍니다
+                pos1 = (pos3 - e.clientX) / currentZoom; 
+                pos2 = (pos4 - e.clientY) / currentZoom;
                 pos3 = e.clientX; pos4 = e.clientY;
+                
                 element.style.top = (element.offsetTop - pos2) + "px";
                 element.style.left = (element.offsetLeft - pos1) + "px";
                 if(onDragCallback) onDragCallback(); 
             }
 
-            function closeDragElement() { 
-                document.onpointerup = null; 
-                document.onpointermove = null; 
-            }
+            function closeDragElement() { document.onpointerup = null; document.onpointermove = null; }
         }
 
         function saveImage() {
+            // 💡 캡처 직전에 줌 배율을 1배(원본 화질)로 잠시 돌려놓기
+            const oldZoom = currentZoom;
+            document.getElementById('canvasZoom').value = 1;
+            changeZoom();
+
             document.querySelectorAll('.close-btn').forEach(btn => btn.classList.add('hide-on-save'));
-            html2canvas(document.getElementById('canvasArea'), { scale: 2, backgroundColor: '#ffffff' }).then(canvas => {
-                const link = document.createElement('a'); link.download = 'Character_Maker_Result.png'; link.href = canvas.toDataURL('image/png'); link.click();
-                document.querySelectorAll('.close-btn').forEach(btn => btn.classList.remove('hide-on-save'));
-            });
+            
+            // 줌이 풀리는 애니메이션 0.2초 대기 후 캡처 진행
+            setTimeout(() => {
+                html2canvas(document.getElementById('canvasArea'), { scale: 2, backgroundColor: '#ffffff' }).then(canvas => {
+                    const link = document.createElement('a'); link.download = 'Character_Maker_Result.png'; link.href = canvas.toDataURL('image/png'); link.click();
+                    document.querySelectorAll('.close-btn').forEach(btn => btn.classList.remove('hide-on-save'));
+                    
+                    // 캡처 완료 후 원래 보던 배율로 복구
+                    document.getElementById('canvasZoom').value = oldZoom;
+                    changeZoom();
+                });
+            }, 300);
         }
     </script>
 </body>
