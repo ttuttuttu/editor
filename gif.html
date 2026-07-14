@@ -106,11 +106,6 @@
     border-color:var(--ink);
   }
   button.pill.primary:hover{background:#2a2d38;}
-  button.pill.on{
-    background:var(--accent);
-    border-color:var(--accent);
-    color:#fff;
-  }
   button.pill:disabled{opacity:.4;cursor:default;}
   label.inline{
     font-size:13px;
@@ -119,7 +114,7 @@
     align-items:center;
     gap:8px;
   }
-  input[type=range]{width:170px;accent-color:var(--accent);}
+  input[type=range]{width:160px;accent-color:var(--accent);}
   input[type=color]{
     width:34px;height:30px;border:1px solid var(--line);
     border-radius:8px;background:#fff;padding:2px;cursor:pointer;
@@ -128,6 +123,14 @@
     font-family:inherit;font-size:13px;width:62px;
     padding:6px 8px;border:1px solid var(--line);border-radius:8px;
   }
+  input[type=text], textarea{
+    font-family:inherit;font-size:13px;
+    padding:8px 12px;border:1px solid var(--line);border-radius:10px;
+    background:#fff;color:var(--ink);
+  }
+  input[type=text]:focus, textarea:focus{outline:1.5px solid var(--accent);}
+  textarea{width:100%;min-height:64px;resize:vertical;line-height:1.7;}
+  input[type=checkbox]{accent-color:var(--accent);width:16px;height:16px;}
   .seg{
     display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;
   }
@@ -138,11 +141,14 @@
   #gifStatus{
     font-size:12px;color:var(--accent);min-width:90px;
   }
+  .sub-label{
+    font-size:12px;color:#9a9a92;letter-spacing:.06em;margin:2px 0 -3px;
+  }
   footer{
     text-align:center;font-size:11px;color:#a5a59d;padding:8px 0 26px;letter-spacing:.1em;
   }
   @media (max-width:560px){
-    input[type=range]{width:120px;}
+    input[type=range]{width:110px;}
   }
 </style>
 </head>
@@ -150,19 +156,19 @@
 
 <header>
   <h1>⊹ 사선 분할 에디터</h1>
-  <p>두 개의 사다리꼴 칸에 사진을 채우고 &nbsp;✦&nbsp; 슬라이드 인 애니메이션을 GIF · PNG · JPG로 저장</p>
+  <p>사진 슬라이드 인 → 잠시 멈춤 → 날짜 · 중앙 글자/그림 · 대사 박스 페이드 인 &nbsp;✦&nbsp; GIF · PNG · JPG 저장</p>
 </header>
 
 <main>
   <div class="stage">
     <canvas id="view" width="1500" height="1000"></canvas>
-    <p class="hint-line">칸을 클릭해 선택 → 사진 넣기 · 사진을 캔버스로 끌어다 놓아도 됩니다 · 드래그로 위치 이동, 휠(또는 크기 슬라이더)로 확대·축소</p>
+    <p class="hint-line">칸 또는 중앙 그림을 클릭해 선택 → 드래그로 이동, 휠(또는 크기 슬라이더)로 확대·축소 · 사진 파일을 캔버스로 끌어다 놓아도 됩니다 · 편집 화면에서는 글자·대사 박스가 항상 보이고, 재생/저장 시에만 순서대로 나타납니다</p>
   </div>
 
   <div class="controls">
 
     <div class="card">
-      <h2>선택된 칸 &nbsp;—&nbsp; <b id="selName">없음</b></h2>
+      <h2>선택된 대상 &nbsp;—&nbsp; <b id="selName">없음</b></h2>
       <div class="row">
         <button class="pill primary" id="btnUpload">사진 넣기</button>
         <button class="pill" id="btnFlipH">좌우 반전</button>
@@ -181,11 +187,58 @@
     </div>
 
     <div class="card">
+      <h2>오버레이 &nbsp;·&nbsp; 애니메이션이 멈춘 뒤 나타나는 요소</h2>
+
+      <p class="sub-label">✦ 왼쪽 상단 날짜</p>
+      <div class="row">
+        <input type="text" id="dateText" placeholder="YY.MM.DD" style="width:130px" maxlength="20">
+        <label class="inline">색 <input type="color" id="dateColor" value="#16181f"></label>
+        <label class="inline">크기 <input type="range" id="dateSize" min="20" max="72" step="1" value="36"></label>
+      </div>
+
+      <p class="sub-label" style="margin-top:14px">✦ 중앙 — 배경 없이 글자 또는 그림</p>
+      <div class="row">
+        <span class="seg" id="centerSeg">
+          <button data-v="none" class="on">없음</button>
+          <button data-v="text">글자</button>
+          <button data-v="image">그림</button>
+        </span>
+      </div>
+      <div class="row" id="centerTextRow" style="display:none">
+        <input type="text" id="centerText" placeholder="중앙에 넣을 문구 (줄바꿈은 \n)" style="flex:1;min-width:200px">
+        <label class="inline">색 <input type="color" id="centerColor" value="#ffffff"></label>
+        <label class="inline">크기 <input type="range" id="centerSize" min="24" max="140" step="1" value="64"></label>
+        <label class="inline"><input type="checkbox" id="centerShadow" checked> 그림자</label>
+      </div>
+      <div class="row" id="centerImgRow" style="display:none">
+        <button class="pill" id="btnCenterImg">중앙 그림 넣기</button>
+        <span class="hint-line" style="margin:0">넣은 뒤 캔버스에서 클릭해 선택하면 드래그·휠·반전으로 조절돼요</span>
+      </div>
+
+      <p class="sub-label" style="margin-top:14px">✦ 하단 대사 박스</p>
+      <div class="row">
+        <label class="inline"><input type="checkbox" id="boxOn"> 대사 박스 표시</label>
+        <input type="text" id="boxName" placeholder="이름" style="width:130px" maxlength="20">
+        <span class="seg" id="boxThemeSeg">
+          <button data-v="dark" class="on">어둡게</button>
+          <button data-v="light">밝게</button>
+        </span>
+        <label class="inline">이름표 색 <input type="color" id="boxAccent" value="#2f7a6f"></label>
+      </div>
+      <div class="row">
+        <textarea id="boxText" placeholder="대사를 입력하세요. 줄바꿈은 그대로 반영됩니다."></textarea>
+      </div>
+    </div>
+
+    <div class="card">
       <h2>애니메이션 &nbsp;·&nbsp; 저장</h2>
       <div class="row">
         <button class="pill primary" id="btnPlay">▶ 재생</button>
-        <label class="inline">길이(초)
+        <label class="inline">슬라이드(초)
           <input type="number" id="dur" min="0.5" max="4" step="0.1" value="1.4">
+        </label>
+        <label class="inline">멈춤(초)
+          <input type="number" id="pause" min="0" max="3" step="0.1" value="0.6">
         </label>
         <label class="inline">GIF 크기
           <span class="seg" id="gifSizeSeg">
@@ -212,24 +265,21 @@
 
 <script>
 /* ───────── 기본 지오메트리 ─────────
-   캔버스 1500×1000, 여백 m, 가운데 사선 분할.
-   분할선 상단은 중앙보다 오른쪽(+s), 하단은 왼쪽(−s) → 두 칸 면적 동일. */
+   캔버스 1500×1000, 가운데 사선 분할. 분할선 상단 +s / 하단 −s 대칭 → 두 칸 면적 동일 */
 const W = 1500, H = 1000;
 const m = 42;          // 바깥 여백
-const s = 78;          // 사선 기울기 (상/하 오프셋)
+const s = 78;          // 사선 기울기
 const g = 34;          // 두 칸 사이 간격
 const cx = W / 2;
 
 const leftPoly  = [[m, m], [cx + s - g/2, m], [cx - s - g/2, H - m], [m, H - m]];
 const rightPoly = [[cx + s + g/2, m], [W - m, m], [W - m, H - m], [cx - s + g/2, H - m]];
 
-// 사선 방향 단위벡터 (위→아래)
 const dl = Math.hypot(-2*s, H - 2*m);
 const dir = [(-2*s)/dl, (H - 2*m)/dl];
-const travel = (H / Math.abs(dir[1])) * 1.06;   // 화면을 완전히 벗어나는 이동 거리
+const travel = (H / Math.abs(dir[1])) * 1.06;
 
-/* 왼쪽 칸: 짧은 밑변이 아래 → 위에서 아래로 미끄러져 들어옴
-   오른쪽 칸: 짧은 밑변이 위 → 아래에서 위로 미끄러져 들어옴 */
+/* 왼쪽 칸: 짧은 밑변(아래) 방향으로 위→아래 / 오른쪽 칸: 짧은 밑변(위) 방향으로 아래→위 */
 const panels = [
   { name:'왼쪽 칸',  poly:leftPoly,  from:[-dir[0]*travel, -dir[1]*travel], delay:0.00,
     img:null, ox:0, oy:0, scale:1, fx:false, fy:false },
@@ -243,45 +293,83 @@ panels.forEach(p=>{
   p.bb = { x:x0, y:y0, w:x1-x0, h:y1-y0, cx:(x0+x1)/2, cy:(y0+y1)/2 };
 });
 
-const state = { sel:-1, bg:'#ffffff', dur:1.4, gifScale:0.55, animT:1, playing:false };
+/* ───────── 상태 ───────── */
+const today = new Date();
+const defDate = String(today.getFullYear()).slice(2) + '.' +
+  String(today.getMonth()+1).padStart(2,'0') + '.' +
+  String(today.getDate()).padStart(2,'0');
 
-/* ───────── 렌더링 ───────── */
+const state = {
+  sel:-1,                 // 0 | 1 | 'c'(중앙 그림)
+  bg:'#ffffff',
+  dur:1.4, pause:0.6, overlayDur:0.7,
+  gifScale:0.55,
+  playing:false,
+  date:{ text:defDate, color:'#16181f', size:36 },
+  center:{
+    mode:'none', text:'', color:'#ffffff', size:64, shadow:true,
+    img:null, x:cx, y:H/2, scale:1, fx:false, fy:false
+  },
+  box:{ on:false, name:'', text:'', theme:'dark', accent:'#2f7a6f' },
+};
+
+/* ───────── 렌더링 유틸 ───────── */
 const view = document.getElementById('view');
 const vctx = view.getContext('2d');
 
+function clamp01(v){ return Math.min(1, Math.max(0, v)); }
 function ease(t){ return 1 - Math.pow(1 - t, 3); }
-function progress(p, t){
-  const span = 0.82;
-  return ease(Math.min(1, Math.max(0, (t - p.delay) / span)));
-}
+function sub(t, a, b){ return ease(clamp01((t - a) / (b - a))); }
+function panelProg(p, t){ return ease(clamp01((t - p.delay) / 0.82)); }
 function pathPoly(ctx, poly){
   ctx.beginPath();
   ctx.moveTo(poly[0][0], poly[0][1]);
   for (let i = 1; i < poly.length; i++) ctx.lineTo(poly[i][0], poly[i][1]);
   ctx.closePath();
 }
+function roundRect(ctx, x, y, w, h, r){
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+function wrapText(ctx, text, maxW){
+  const out = [];
+  for (const para of text.split('\n')){
+    let line = '';
+    for (const ch of para){
+      if (line && ctx.measureText(line + ch).width > maxW){ out.push(line); line = ch; }
+      else line += ch;
+    }
+    out.push(line);
+  }
+  return out;
+}
+function centerImgScale(img){
+  return Math.min(560 / img.width, 420 / img.height);
+}
 
-function render(ctx, t, opts = {}){
+/* ───────── 메인 렌더 ─────────
+   pT: 패널 슬라이드 진행도 0..1 / oT: 오버레이 진행도 0..1 */
+function render(ctx, pT, oT, opts = {}){
   const sc = opts.scale || 1;
   ctx.save();
   ctx.setTransform(sc, 0, 0, sc, 0, 0);
   ctx.fillStyle = state.bg;
   ctx.fillRect(0, 0, W, H);
 
-  panels.forEach((p, i)=>{
-    const pr = progress(p, t);
-    const offX = p.from[0] * (1 - pr);
-    const offY = p.from[1] * (1 - pr);
-
+  /* 1. 패널 */
+  panels.forEach(p=>{
+    const pr = panelProg(p, pT);
     ctx.save();
-    ctx.translate(offX, offY);
+    ctx.translate(p.from[0] * (1 - pr), p.from[1] * (1 - pr));
     pathPoly(ctx, p.poly);
     ctx.clip();
-
-    // 칸 바탕
     ctx.fillStyle = p.img ? '#ffffff' : '#efefec';
     ctx.fillRect(p.bb.x, p.bb.y, p.bb.w, p.bb.h);
-
     if (p.img){
       const base = Math.max(p.bb.w / p.img.width, p.bb.h / p.img.height);
       const k = base * p.scale;
@@ -290,8 +378,8 @@ function render(ctx, t, opts = {}){
       ctx.drawImage(p.img, -p.img.width / 2, -p.img.height / 2);
     } else if (opts.edit){
       ctx.fillStyle = '#b3b3ab';
-      ctx.font = '28px "Gowun Dodum", sans-serif';
       ctx.textAlign = 'center';
+      ctx.font = '28px "Gowun Dodum", sans-serif';
       ctx.fillText('⊹', p.bb.cx, p.bb.cy - 14);
       ctx.font = '22px "Gowun Dodum", sans-serif';
       ctx.fillText('클릭해서 선택 후 사진 넣기', p.bb.cx, p.bb.cy + 26);
@@ -299,21 +387,129 @@ function render(ctx, t, opts = {}){
     ctx.restore();
   });
 
-  // 선택 표시 (편집 화면에서만)
-  if (opts.edit && state.sel >= 0){
-    const p = panels[state.sel];
+  /* 2. 오버레이 (편집 화면에서는 항상 완성 상태로 표시) */
+  const tDate   = opts.edit ? 1 : sub(oT, 0.00, 0.55);
+  const tCenter = opts.edit ? 1 : sub(oT, 0.15, 0.75);
+  const tBox    = opts.edit ? 1 : sub(oT, 0.30, 1.00);
+
+  // 2-1. 왼쪽 상단 날짜
+  if (state.date.text && tDate > 0){
     ctx.save();
-    pathPoly(ctx, p.poly);
+    ctx.globalAlpha = tDate;
+    ctx.font = '700 ' + state.date.size + 'px "Gowun Batang", serif';
+    ctx.fillStyle = state.date.color;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.shadowColor = 'rgba(0,0,0,0.25)';
+    ctx.shadowBlur = 6;
+    ctx.fillText(state.date.text, m + 22, m + 20);
+    ctx.restore();
+  }
+
+  // 2-2. 중앙 글자 또는 그림
+  const c = state.center;
+  if (tCenter > 0){
+    if (c.mode === 'text' && c.text){
+      ctx.save();
+      ctx.globalAlpha = tCenter;
+      ctx.font = '700 ' + c.size + 'px "Gowun Batang", serif';
+      ctx.fillStyle = c.color;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      if (c.shadow){ ctx.shadowColor = 'rgba(0,0,0,0.45)'; ctx.shadowBlur = 14; }
+      const lines = c.text.split('\\n').join('\n').split('\n');
+      const lh = c.size * 1.35;
+      const y0 = H/2 - lh * (lines.length - 1) / 2;
+      lines.forEach((ln, i)=>ctx.fillText(ln, cx, y0 + lh * i));
+      ctx.restore();
+    }
+    if (c.mode === 'image' && c.img){
+      ctx.save();
+      ctx.globalAlpha = tCenter;
+      const k = centerImgScale(c.img) * c.scale;
+      ctx.translate(c.x, c.y);
+      ctx.scale(c.fx ? -k : k, c.fy ? -k : k);
+      ctx.drawImage(c.img, -c.img.width / 2, -c.img.height / 2);
+      ctx.restore();
+    }
+  }
+
+  // 2-3. 하단 대사 박스 (미연시 스타일)
+  const b = state.box;
+  if (b.on && (b.name || b.text) && tBox > 0){
+    ctx.save();
+    ctx.globalAlpha = tBox;
+    ctx.translate(0, (1 - tBox) * 26);       // 살짝 아래에서 떠오르는 느낌
+
+    const bx = 96, bw = W - bx * 2, bh = 196;
+    const by = H - m - 26 - bh;
+    const dark = b.theme === 'dark';
+
+    ctx.shadowColor = 'rgba(0,0,0,0.3)';
+    ctx.shadowBlur = 22;
+    roundRect(ctx, bx, by, bw, bh, 22);
+    ctx.fillStyle = dark ? 'rgba(22,24,31,0.88)' : 'rgba(255,255,255,0.93)';
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = dark ? 'rgba(255,255,255,0.22)' : 'rgba(22,24,31,0.18)';
+    roundRect(ctx, bx + 7, by + 7, bw - 14, bh - 14, 16);
+    ctx.stroke();
+
+    // 이름표
+    if (b.name){
+      ctx.font = '700 28px "Gowun Batang", serif';
+      const nw = ctx.measureText(b.name).width + 56;
+      const nh = 52, nx = bx + 36, ny = by - nh / 2;
+      roundRect(ctx, nx, ny, nw, nh, 26);
+      ctx.fillStyle = b.accent;
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(b.name, nx + nw / 2, ny + nh / 2 + 2);
+    }
+
+    // 대사
+    if (b.text){
+      ctx.font = '30px "Gowun Dodum", sans-serif';
+      ctx.fillStyle = dark ? '#f5f4ef' : '#16181f';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      const lines = wrapText(ctx, b.text, bw - 108).slice(0, 3);
+      lines.forEach((ln, i)=>ctx.fillText(ln, bx + 54, by + (b.name ? 52 : 40) + i * 46));
+    }
+
+    // 진행 표시 ▼
+    ctx.fillStyle = dark ? 'rgba(255,255,255,0.55)' : 'rgba(22,24,31,0.4)';
+    ctx.font = '22px sans-serif';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText('▼', bx + bw - 34, by + bh - 24);
+    ctx.restore();
+  }
+
+  /* 3. 선택 표시 (편집 화면에서만) */
+  if (opts.edit && state.sel !== -1){
+    ctx.save();
     ctx.lineWidth = 5;
     ctx.setLineDash([16, 12]);
     ctx.strokeStyle = '#2f7a6f';
-    ctx.stroke();
+    if (state.sel === 'c' && c.img){
+      const k = centerImgScale(c.img) * c.scale;
+      const w2 = c.img.width * k / 2, h2 = c.img.height * k / 2;
+      ctx.strokeRect(c.x - w2, c.y - h2, w2 * 2, h2 * 2);
+    } else if (state.sel !== 'c'){
+      pathPoly(ctx, panels[state.sel].poly);
+      ctx.stroke();
+    }
     ctx.restore();
   }
   ctx.restore();
 }
 
-function draw(){ render(vctx, state.animT, { edit:!state.playing }); }
+function draw(){ render(vctx, 1, 1, { edit:!state.playing }); }
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(draw);
 draw();
 
 /* ───────── 선택 · 드래그 · 확대 ───────── */
@@ -330,21 +526,34 @@ function inPoly(pt, poly){
   }
   return inside;
 }
-function panelAt(pt){
-  for (let i = 0; i < panels.length; i++) if (inPoly(pt, panels[i].poly)) return i;
-  return -1;
+function hitCenterImg(pt){
+  const c = state.center;
+  if (c.mode !== 'image' || !c.img) return false;
+  const k = centerImgScale(c.img) * c.scale;
+  return Math.abs(pt[0] - c.x) <= c.img.width * k / 2 &&
+         Math.abs(pt[1] - c.y) <= c.img.height * k / 2;
 }
+function targetOf(sel){ return sel === 'c' ? state.center : panels[sel]; }
 
 let drag = null;
 view.addEventListener('pointerdown', e=>{
   if (state.playing) return;
   const pt = toCanvas(e);
-  const idx = panelAt(pt);
+
+  if (hitCenterImg(pt)){
+    selectTarget('c');
+    drag = { kind:'c', sx:pt[0], sy:pt[1], x:state.center.x, y:state.center.y };
+    view.setPointerCapture(e.pointerId);
+    view.style.cursor = 'grabbing';
+    draw();
+    return;
+  }
+  const idx = panels.findIndex(p=>inPoly(pt, p.poly));
   if (idx >= 0){
-    selectPanel(idx);
+    selectTarget(idx);
     const p = panels[idx];
     if (p.img){
-      drag = { idx, sx:pt[0], sy:pt[1], ox:p.ox, oy:p.oy };
+      drag = { kind:'p', idx, sx:pt[0], sy:pt[1], ox:p.ox, oy:p.oy };
       view.setPointerCapture(e.pointerId);
       view.style.cursor = 'grabbing';
     }
@@ -354,49 +563,59 @@ view.addEventListener('pointerdown', e=>{
 view.addEventListener('pointermove', e=>{
   if (!drag) return;
   const pt = toCanvas(e);
-  const p = panels[drag.idx];
-  p.ox = drag.ox + (pt[0] - drag.sx);
-  p.oy = drag.oy + (pt[1] - drag.sy);
+  if (drag.kind === 'c'){
+    state.center.x = drag.x + (pt[0] - drag.sx);
+    state.center.y = drag.y + (pt[1] - drag.sy);
+  } else {
+    const p = panels[drag.idx];
+    p.ox = drag.ox + (pt[0] - drag.sx);
+    p.oy = drag.oy + (pt[1] - drag.sy);
+  }
   draw();
 });
 ['pointerup','pointercancel'].forEach(ev=>view.addEventListener(ev, ()=>{
   drag = null; view.style.cursor = 'grab';
 }));
 view.addEventListener('wheel', e=>{
-  if (state.sel < 0 || !panels[state.sel].img) return;
+  if (state.sel === -1) return;
+  const t = targetOf(state.sel);
+  if (!t.img) return;
   e.preventDefault();
-  const p = panels[state.sel];
-  p.scale = Math.min(4, Math.max(0.3, p.scale * (e.deltaY < 0 ? 1.06 : 0.94)));
-  scaleSlider.value = p.scale;
+  t.scale = Math.min(4, Math.max(0.15, t.scale * (e.deltaY < 0 ? 1.06 : 0.94)));
+  scaleSlider.value = t.scale;
   draw();
 }, { passive:false });
 
-/* 드래그 앤 드롭으로 사진 넣기 */
 view.addEventListener('dragover', e=>e.preventDefault());
 view.addEventListener('drop', e=>{
   e.preventDefault();
   const f = e.dataTransfer.files && e.dataTransfer.files[0];
   if (!f || !f.type.startsWith('image/')) return;
-  const idx = panelAt(toCanvas(e));
-  if (idx >= 0){ selectPanel(idx); loadImageTo(idx, f); }
+  const pt = toCanvas(e);
+  if (hitCenterImg(pt) || state.sel === 'c'){ selectTarget('c'); loadImageTo('c', f); return; }
+  const idx = panels.findIndex(p=>inPoly(pt, p.poly));
+  if (idx >= 0){ selectTarget(idx); loadImageTo(idx, f); }
 });
 
 /* ───────── 컨트롤 ───────── */
 const selName = document.getElementById('selName');
 const scaleSlider = document.getElementById('scale');
 const fileInput = document.getElementById('file');
+let pendingUpload = null;
 
-function selectPanel(i){
-  state.sel = i;
-  selName.textContent = panels[i].name;
-  scaleSlider.value = panels[i].scale;
+function selectTarget(sel){
+  state.sel = sel;
+  selName.textContent = sel === 'c' ? '중앙 그림' : panels[sel].name;
+  scaleSlider.value = targetOf(sel).scale;
 }
-function loadImageTo(idx, file){
+function loadImageTo(sel, file){
   const url = URL.createObjectURL(file);
   const img = new Image();
   img.onload = ()=>{
-    const p = panels[idx];
-    p.img = img; p.ox = 0; p.oy = 0; p.scale = 1; p.fx = false; p.fy = false;
+    const t = targetOf(sel);
+    t.img = img; t.scale = 1; t.fx = false; t.fy = false;
+    if (sel === 'c'){ t.x = cx; t.y = H / 2; t.mode = 'image'; }
+    else { t.ox = 0; t.oy = 0; }
     scaleSlider.value = 1;
     draw();
   };
@@ -404,55 +623,109 @@ function loadImageTo(idx, file){
 }
 
 document.getElementById('btnUpload').onclick = ()=>{
-  if (state.sel < 0){ selectPanel(0); draw(); }
+  if (state.sel === -1){ selectTarget(0); draw(); }
+  pendingUpload = state.sel;
   fileInput.click();
 };
+document.getElementById('btnCenterImg').onclick = ()=>{
+  selectTarget('c');
+  pendingUpload = 'c';
+  fileInput.click();
+  draw();
+};
 fileInput.onchange = ()=>{
-  if (fileInput.files[0] && state.sel >= 0) loadImageTo(state.sel, fileInput.files[0]);
-  fileInput.value = '';
+  if (fileInput.files[0] && pendingUpload !== null) loadImageTo(pendingUpload, fileInput.files[0]);
+  fileInput.value = ''; pendingUpload = null;
 };
 scaleSlider.oninput = ()=>{
-  if (state.sel >= 0){ panels[state.sel].scale = parseFloat(scaleSlider.value); draw(); }
+  if (state.sel !== -1){ targetOf(state.sel).scale = parseFloat(scaleSlider.value); draw(); }
 };
 document.getElementById('btnFlipH').onclick = ()=>{
-  if (state.sel >= 0 && panels[state.sel].img){ panels[state.sel].fx = !panels[state.sel].fx; draw(); }
+  if (state.sel !== -1 && targetOf(state.sel).img){ const t = targetOf(state.sel); t.fx = !t.fx; draw(); }
 };
 document.getElementById('btnFlipV').onclick = ()=>{
-  if (state.sel >= 0 && panels[state.sel].img){ panels[state.sel].fy = !panels[state.sel].fy; draw(); }
+  if (state.sel !== -1 && targetOf(state.sel).img){ const t = targetOf(state.sel); t.fy = !t.fy; draw(); }
 };
 document.getElementById('btnReset').onclick = ()=>{
-  if (state.sel < 0) return;
-  const p = panels[state.sel];
-  p.ox = 0; p.oy = 0; p.scale = 1; p.fx = false; p.fy = false;
+  if (state.sel === -1) return;
+  const t = targetOf(state.sel);
+  t.scale = 1; t.fx = false; t.fy = false;
+  if (state.sel === 'c'){ t.x = cx; t.y = H / 2; }
+  else { t.ox = 0; t.oy = 0; }
   scaleSlider.value = 1; draw();
 };
 document.getElementById('btnClear').onclick = ()=>{
-  if (state.sel < 0) return;
-  panels[state.sel].img = null; draw();
+  if (state.sel === -1) return;
+  targetOf(state.sel).img = null; draw();
 };
 document.getElementById('bgColor').oninput = e=>{ state.bg = e.target.value; draw(); };
-document.getElementById('dur').onchange = e=>{
+
+/* 오버레이 컨트롤 */
+const $ = id=>document.getElementById(id);
+$('dateText').value = defDate;
+$('dateText').oninput  = e=>{ state.date.text = e.target.value; draw(); };
+$('dateColor').oninput = e=>{ state.date.color = e.target.value; draw(); };
+$('dateSize').oninput  = e=>{ state.date.size = +e.target.value; draw(); };
+
+$('centerSeg').addEventListener('click', e=>{
+  const b = e.target.closest('button'); if (!b) return;
+  state.center.mode = b.dataset.v;
+  document.querySelectorAll('#centerSeg button').forEach(x=>x.classList.toggle('on', x === b));
+  $('centerTextRow').style.display = state.center.mode === 'text'  ? 'flex' : 'none';
+  $('centerImgRow').style.display  = state.center.mode === 'image' ? 'flex' : 'none';
+  if (state.center.mode === 'image' && !state.center.img){
+    selectTarget('c'); pendingUpload = 'c'; fileInput.click();
+  }
+  draw();
+});
+$('centerText').oninput   = e=>{ state.center.text = e.target.value; draw(); };
+$('centerColor').oninput  = e=>{ state.center.color = e.target.value; draw(); };
+$('centerSize').oninput   = e=>{ state.center.size = +e.target.value; draw(); };
+$('centerShadow').onchange= e=>{ state.center.shadow = e.target.checked; draw(); };
+
+$('boxOn').onchange   = e=>{ state.box.on = e.target.checked; draw(); };
+$('boxName').oninput  = e=>{ state.box.name = e.target.value; draw(); };
+$('boxText').oninput  = e=>{ state.box.text = e.target.value; draw(); };
+$('boxAccent').oninput= e=>{ state.box.accent = e.target.value; draw(); };
+$('boxThemeSeg').addEventListener('click', e=>{
+  const b = e.target.closest('button'); if (!b) return;
+  state.box.theme = b.dataset.v;
+  document.querySelectorAll('#boxThemeSeg button').forEach(x=>x.classList.toggle('on', x === b));
+  draw();
+});
+
+$('dur').onchange = e=>{
   state.dur = Math.min(4, Math.max(0.5, parseFloat(e.target.value) || 1.4));
   e.target.value = state.dur;
 };
-document.getElementById('gifSizeSeg').addEventListener('click', e=>{
+$('pause').onchange = e=>{
+  state.pause = Math.min(3, Math.max(0, parseFloat(e.target.value) || 0));
+  e.target.value = state.pause;
+};
+$('gifSizeSeg').addEventListener('click', e=>{
   const b = e.target.closest('button'); if (!b) return;
   state.gifScale = parseFloat(b.dataset.v);
   document.querySelectorAll('#gifSizeSeg button').forEach(x=>x.classList.toggle('on', x === b));
 });
 
-/* ───────── 애니메이션 미리보기 ───────── */
+/* ───────── 타임라인: 슬라이드 → 멈춤 → 오버레이 ───────── */
+function phaseAt(elapsedSec){
+  const pT = clamp01(elapsedSec / state.dur);
+  const oT = clamp01((elapsedSec - state.dur - state.pause) / state.overlayDur);
+  return [pT, oT];
+}
+function totalSec(){ return state.dur + state.pause + state.overlayDur; }
+
 document.getElementById('btnPlay').onclick = ()=>{
   if (state.playing) return;
   state.playing = true;
   const t0 = performance.now();
-  const dur = state.dur * 1000;
   (function step(now){
-    const t = Math.min(1, (now - t0) / dur);
-    state.animT = t;
-    render(vctx, t, { edit:false });
-    if (t < 1) requestAnimationFrame(step);
-    else { state.playing = false; state.animT = 1; draw(); }
+    const el = (now - t0) / 1000;
+    const [pT, oT] = phaseAt(el);
+    render(vctx, pT, oT, { edit:false });
+    if (el < totalSec()) requestAnimationFrame(step);
+    else { state.playing = false; draw(); }
   })(t0);
 };
 
@@ -467,9 +740,8 @@ function download(blob, name){
 function exportStill(type){
   const c = document.createElement('canvas');
   c.width = W; c.height = H;
-  render(c.getContext('2d'), 1, {});
-  const mime = type === 'jpg' ? 'image/jpeg' : 'image/png';
-  c.toBlob(b=>download(b, 'panel.' + type), mime, 0.92);
+  render(c.getContext('2d'), 1, 1, {});
+  c.toBlob(b=>download(b, 'panel.' + type), type === 'jpg' ? 'image/jpeg' : 'image/png', 0.92);
 }
 document.getElementById('btnPng').onclick = ()=>exportStill('png');
 document.getElementById('btnJpg').onclick = ()=>exportStill('jpg');
@@ -496,15 +768,17 @@ document.getElementById('btnGif').onclick = async ()=>{
     const ctx = c.getContext('2d');
 
     const fps = 25;
-    const n = Math.round(fps * state.dur);
-    render(ctx, 0, { scale:gs });
-    gif.addFrame(ctx, { copy:true, delay:300 });          // 빈 화면 잠깐 유지
+    const total = totalSec();
+    const n = Math.round(fps * total);
+    render(ctx, 0, 0, { scale:gs });
+    gif.addFrame(ctx, { copy:true, delay:300 });            // 빈 화면 잠깐
     for (let f = 1; f <= n; f++){
-      render(ctx, f / n, { scale:gs });
+      const [pT, oT] = phaseAt((f / n) * total);
+      render(ctx, pT, oT, { scale:gs });
       gif.addFrame(ctx, { copy:true, delay:1000 / fps });
     }
-    render(ctx, 1, { scale:gs });
-    gif.addFrame(ctx, { copy:true, delay:1400 });         // 완성 화면 유지
+    render(ctx, 1, 1, { scale:gs });
+    gif.addFrame(ctx, { copy:true, delay:1800 });           // 완성 화면 유지
 
     gif.on('progress', p=>{ gifStatus.textContent = 'GIF 생성 ' + Math.round(p * 100) + '%'; });
     gif.on('finished', blob=>{
