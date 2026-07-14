@@ -205,13 +205,19 @@
       </div>
       <div class="row" id="centerTextRow" style="display:none">
         <input type="text" id="centerText" placeholder="중앙에 넣을 문구 (줄바꿈은 \n)" style="flex:1;min-width:200px">
-        <label class="inline">색 <input type="color" id="centerColor" value="#ffffff"></label>
-        <label class="inline">크기 <input type="range" id="centerSize" min="24" max="140" step="1" value="64"></label>
+        <label class="inline">색
+          <input type="color" id="centerColor" value="#ffffff">
+          <input type="text" id="centerColorHex" class="hex" value="#ffffff" maxlength="7" spellcheck="false">
+        </label>
+        <label class="inline">크기 <input type="range" id="centerSize" min="24" max="200" step="1" value="64"></label>
         <label class="inline"><input type="checkbox" id="centerShadow" checked> 그림자</label>
       </div>
       <div class="row" id="centerImgRow" style="display:none">
         <button class="pill" id="btnCenterImg">중앙 그림 넣기</button>
-        <span class="hint-line" style="margin:0">넣은 뒤 캔버스에서 클릭해 선택하면 드래그·휠·반전으로 조절돼요</span>
+        <label class="inline">크기
+          <input type="range" id="centerImgScale" min="0.15" max="4" step="0.01" value="1">
+        </label>
+        <span class="hint-line" style="margin:0">캔버스에서 클릭해 선택하면 드래그·휠·반전으로도 조절돼요</span>
       </div>
 
       <p class="sub-label" style="margin-top:14px">✦ 하단 대사 박스</p>
@@ -566,6 +572,7 @@ view.addEventListener('wheel', e=>{
   e.preventDefault();
   t.scale = Math.min(4, Math.max(0.15, t.scale * (e.deltaY < 0 ? 1.06 : 0.94)));
   scaleSlider.value = t.scale;
+  if (state.sel === 'c') syncCenterScaleUI();
   draw();
 }, { passive:false });
 
@@ -597,7 +604,7 @@ function loadImageTo(sel, file){
   img.onload = ()=>{
     const t = targetOf(sel);
     t.img = img; t.scale = 1; t.fx = false; t.fy = false;
-    if (sel === 'c'){ t.x = cx; t.y = H / 2; t.mode = 'image'; }
+    if (sel === 'c'){ t.x = cx; t.y = H / 2; t.mode = 'image'; syncCenterScaleUI(); }
     else { t.ox = 0; t.oy = 0; }
     scaleSlider.value = 1;
     draw();
@@ -621,7 +628,11 @@ fileInput.onchange = ()=>{
   fileInput.value = ''; pendingUpload = null;
 };
 scaleSlider.oninput = ()=>{
-  if (state.sel !== -1){ targetOf(state.sel).scale = parseFloat(scaleSlider.value); draw(); }
+  if (state.sel !== -1){
+    targetOf(state.sel).scale = parseFloat(scaleSlider.value);
+    if (state.sel === 'c') syncCenterScaleUI();
+    draw();
+  }
 };
 document.getElementById('btnFlipH').onclick = ()=>{
   if (state.sel !== -1 && targetOf(state.sel).img){ const t = targetOf(state.sel); t.fx = !t.fx; draw(); }
@@ -633,7 +644,7 @@ document.getElementById('btnReset').onclick = ()=>{
   if (state.sel === -1) return;
   const t = targetOf(state.sel);
   t.scale = 1; t.fx = false; t.fy = false;
-  if (state.sel === 'c'){ t.x = cx; t.y = H / 2; }
+  if (state.sel === 'c'){ t.x = cx; t.y = H / 2; syncCenterScaleUI(); }
   else { t.ox = 0; t.oy = 0; }
   scaleSlider.value = 1; draw();
 };
@@ -658,9 +669,17 @@ $('centerSeg').addEventListener('click', e=>{
   draw();
 });
 $('centerText').oninput   = e=>{ state.center.text = e.target.value; draw(); };
-$('centerColor').oninput  = e=>{ state.center.color = e.target.value; draw(); };
 $('centerSize').oninput   = e=>{ state.center.size = +e.target.value; draw(); };
 $('centerShadow').onchange= e=>{ state.center.shadow = e.target.checked; draw(); };
+
+/* 중앙 그림 전용 크기 슬라이더 (선택 카드의 크기 슬라이더와 동기화) */
+const ciScale = $('centerImgScale');
+ciScale.oninput = e=>{
+  state.center.scale = parseFloat(e.target.value);
+  if (state.sel === 'c') scaleSlider.value = state.center.scale;
+  draw();
+};
+function syncCenterScaleUI(){ ciScale.value = state.center.scale; }
 
 $('boxOn').onchange   = e=>{ state.box.on = e.target.checked; draw(); };
 $('boxName').oninput  = e=>{ state.box.name = e.target.value; draw(); };
@@ -672,37 +691,40 @@ $('boxThemeSeg').addEventListener('click', e=>{
   draw();
 });
 
-/* 이름표 색 — 컬러 피커 ↔ 헥스코드 입력 양방향 동기화 */
-const accentPicker = $('boxAccent');
-const accentHex = $('boxAccentHex');
+/* 컬러 피커 ↔ 헥스코드 입력 양방향 동기화 (공통) */
 function normalizeHex(v){
   v = v.trim();
   if (!v.startsWith('#')) v = '#' + v;
   if (/^#[0-9a-fA-F]{3}$/.test(v)) v = '#' + [...v.slice(1)].map(ch=>ch+ch).join('');
   return /^#[0-9a-fA-F]{6}$/.test(v) ? v.toLowerCase() : null;
 }
-accentPicker.oninput = e=>{
-  state.box.accent = e.target.value;
-  accentHex.value = e.target.value;
-  accentHex.classList.remove('bad');
-  draw();
-};
-accentHex.oninput = e=>{
-  const hex = normalizeHex(e.target.value);
-  if (hex){
-    state.box.accent = hex;
-    accentPicker.value = hex;
-    accentHex.classList.remove('bad');
+function bindColorPair(pickerId, hexId, apply){
+  const picker = $(pickerId), hex = $(hexId);
+  picker.oninput = e=>{
+    apply(e.target.value);
+    hex.value = e.target.value;
+    hex.classList.remove('bad');
     draw();
-  } else {
-    accentHex.classList.add('bad');
-  }
-};
-accentHex.onblur = ()=>{
-  const hex = normalizeHex(accentHex.value);
-  accentHex.value = hex || state.box.accent;
-  accentHex.classList.remove('bad');
-};
+  };
+  hex.oninput = e=>{
+    const v = normalizeHex(e.target.value);
+    if (v){
+      apply(v);
+      picker.value = v;
+      hex.classList.remove('bad');
+      draw();
+    } else {
+      hex.classList.add('bad');
+    }
+  };
+  hex.onblur = ()=>{
+    const v = normalizeHex(hex.value);
+    hex.value = v || picker.value;
+    hex.classList.remove('bad');
+  };
+}
+bindColorPair('centerColor', 'centerColorHex', v=>state.center.color = v);   // 중앙 글자 색
+bindColorPair('boxAccent',   'boxAccentHex',   v=>state.box.accent = v);     // 이름표 색
 
 $('dur').onchange = e=>{
   state.dur = Math.min(4, Math.max(0.5, parseFloat(e.target.value) || 1.4));
