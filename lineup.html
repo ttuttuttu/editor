@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>캐릭터 라인업 에디터</title>
+<title>캐릭터 스킬컷 라인업 에디터</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Gowun+Dodum&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Gowun+Dodum&family=Noto+Serif+KR:wght@400;700&family=Noto+Sans+KR:wght@400;700&family=Nanum+Myeongjo:wght@400;700&family=Nanum+Pen+Script&family=Jua&family=Song+Myung&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=EB+Garamond:ital,wght@0,400;0,700;1,400;1,700&family=Montserrat:ital,wght@0,400;0,700;1,400;1,700&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Cinzel:wght@400;700&family=Bebas+Neue&family=Dancing+Script:wght@400;700&family=Great+Vibes&display=swap" rel="stylesheet">
 <style>
   :root{
     --ink:#16181f;
@@ -114,7 +114,7 @@
     align-items:center;
     gap:8px;
   }
-  input[type=range]{width:150px;accent-color:var(--accent);}
+  input[type=range]{width:140px;accent-color:var(--accent);}
   input[type=color]{
     width:34px;height:30px;border:1px solid var(--line);
     border-radius:8px;background:#fff;padding:2px;cursor:pointer;
@@ -136,6 +136,12 @@
     letter-spacing:.04em;
   }
   input.hex.bad{outline:1.5px solid #c0564f;}
+  select{
+    font-family:inherit;font-size:13px;
+    padding:8px 12px;border:1px solid var(--line);border-radius:10px;
+    background:#fff;color:var(--ink);cursor:pointer;
+  }
+  select:focus{outline:1.5px solid var(--accent);}
   .seg{
     display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;
   }
@@ -154,11 +160,14 @@
   .name-grid label{
     font-size:12px;color:#9a9a92;display:flex;flex-direction:column;gap:5px;
   }
+  .sub-label{
+    font-size:12px;color:#9a9a92;letter-spacing:.06em;margin:2px 0 -3px;
+  }
   footer{
     text-align:center;font-size:11px;color:#a5a59d;padding:8px 0 26px;letter-spacing:.1em;
   }
   @media (max-width:560px){
-    input[type=range]{width:110px;}
+    input[type=range]{width:104px;}
   }
 </style>
 </head>
@@ -172,13 +181,13 @@
 <main>
   <div class="stage">
     <canvas id="view" width="1600" height="900"></canvas>
-    <p class="hint-line">칸을 클릭해 선택 → 드래그로 위치 이동, 휠(또는 크기 슬라이더)로 확대·축소 · 사진 파일을 칸 위로 끌어다 놓아도 됩니다 · 칸 수를 바꿔도 넣어 둔 사진과 이름은 유지돼요</p>
+    <p class="hint-line">칸(또는 하단 사진)을 클릭해 선택 → 드래그로 위치 이동, 휠(또는 크기 슬라이더)로 확대·축소 · 사진 파일을 원하는 곳에 끌어다 놓아도 됩니다 · 칸 수를 바꿔도 넣어 둔 사진과 이름은 유지돼요</p>
   </div>
 
   <div class="controls">
 
     <div class="card">
-      <h2>선택된 칸 &nbsp;—&nbsp; <b id="selName">없음</b></h2>
+      <h2>선택된 대상 &nbsp;—&nbsp; <b id="selName">없음</b></h2>
       <div class="row">
         <button class="pill primary" id="btnUpload">사진 넣기 / 바꾸기</button>
         <button class="pill" id="btnFlipH">좌우 반전</button>
@@ -188,13 +197,13 @@
       </div>
       <div class="row">
         <label class="inline">크기
-          <input type="range" id="scale" min="0.3" max="4" step="0.01" value="1">
+          <input type="range" id="scale" min="0.15" max="4" step="0.01" value="1">
         </label>
       </div>
     </div>
 
     <div class="card">
-      <h2>구성</h2>
+      <h2>구성 &nbsp;·&nbsp; 배경</h2>
       <div class="row">
         <label class="inline">칸 수
           <span class="seg" id="countSeg">
@@ -211,8 +220,28 @@
         <label class="inline">칸 간격
           <input type="range" id="gap" min="8" max="60" step="1" value="24">
         </label>
+      </div>
+      <div class="row">
         <label class="inline">배경색
           <input type="color" id="bgColor" value="#ffffff">
+          <input type="text" id="bgColorHex" class="hex" value="#ffffff" maxlength="7" spellcheck="false">
+        </label>
+      </div>
+      <div class="row">
+        <label class="inline">패턴
+          <span class="seg" id="patternSeg">
+            <button data-v="none" class="on">없음</button>
+            <button data-v="grid">격자</button>
+            <button data-v="dots">점</button>
+            <button data-v="diag">사선</button>
+          </span>
+        </label>
+        <label class="inline">패턴 색
+          <input type="color" id="patColor" value="#e4e4df">
+          <input type="text" id="patColorHex" class="hex" value="#e4e4df" maxlength="7" spellcheck="false">
+        </label>
+        <label class="inline">패턴 크기
+          <input type="range" id="patSize" min="16" max="90" step="1" value="42">
         </label>
       </div>
     </div>
@@ -221,6 +250,13 @@
       <h2>이름 &nbsp;·&nbsp; 각 칸과 함께 슬라이드되어 등장</h2>
       <div class="name-grid" id="nameGrid"></div>
       <div class="row" style="margin-top:12px">
+        <label class="inline">글씨체
+          <select id="nameFont"></select>
+        </label>
+        <label class="inline"><input type="checkbox" id="nameBold" checked> 볼드</label>
+        <label class="inline"><input type="checkbox" id="nameItalic"> 기울임</label>
+      </div>
+      <div class="row">
         <label class="inline">위치
           <span class="seg" id="namePosSeg">
             <button data-v="bottom" class="on">하단</button>
@@ -240,6 +276,43 @@
     </div>
 
     <div class="card">
+      <h2>하단 백지 공간 &nbsp;·&nbsp; 문구와 사진을 자유롭게</h2>
+      <div class="row">
+        <label class="inline"><input type="checkbox" id="footerOn"> 하단 공간 추가</label>
+        <label class="inline">높이
+          <input type="range" id="footerH" min="90" max="320" step="2" value="170">
+        </label>
+        <button class="pill" id="btnFooterImg">하단 사진 넣기</button>
+      </div>
+      <div class="row">
+        <input type="text" id="footerText" placeholder="하단 문구 (줄바꿈은 \n)" style="flex:1;min-width:200px">
+      </div>
+      <div class="row">
+        <label class="inline">글씨체
+          <select id="footerFont"></select>
+        </label>
+        <label class="inline"><input type="checkbox" id="footerBold"> 볼드</label>
+        <label class="inline"><input type="checkbox" id="footerItalic"> 기울임</label>
+        <label class="inline">정렬
+          <span class="seg" id="footerAlignSeg">
+            <button data-v="left">왼쪽</button>
+            <button data-v="center" class="on">가운데</button>
+            <button data-v="right">오른쪽</button>
+          </span>
+        </label>
+      </div>
+      <div class="row">
+        <label class="inline">색
+          <input type="color" id="footerColor" value="#16181f">
+          <input type="text" id="footerColorHex" class="hex" value="#16181f" maxlength="7" spellcheck="false">
+        </label>
+        <label class="inline">크기
+          <input type="range" id="footerSize" min="18" max="90" step="1" value="40">
+        </label>
+      </div>
+    </div>
+
+    <div class="card">
       <h2>애니메이션 &nbsp;·&nbsp; 저장</h2>
       <div class="row">
         <button class="pill primary" id="btnPlay">▶ 재생</button>
@@ -248,9 +321,9 @@
         </label>
         <label class="inline">GIF 크기
           <span class="seg" id="gifSizeSeg">
-            <button data-v="0.35">소</button>
-            <button data-v="0.5" class="on">중</button>
-            <button data-v="0.75">대</button>
+            <button data-v="0.5">소</button>
+            <button data-v="0.7" class="on">중</button>
+            <button data-v="1">대</button>
           </span>
         </label>
       </div>
@@ -265,59 +338,106 @@
   </div>
 </main>
 
-<footer>✦ &nbsp; 1600 × 900 &nbsp; ✦</footer>
+<footer>✦ &nbsp; 1600 × 900 (+하단 공간) &nbsp; ✦</footer>
 
 <input type="file" id="file" accept="image/*" hidden>
 
 <script>
+/* ───────── 폰트 목록 (한글 8 + 영문 8, 전부 무료 구글 폰트) ───────── */
+const FONTS = [
+  { label:'고운바탕',        family:'Gowun Batang',      kr:true },
+  { label:'고운돋움',        family:'Gowun Dodum',       kr:true },
+  { label:'노토 세리프 KR',  family:'Noto Serif KR',     kr:true },
+  { label:'노토 산스 KR',    family:'Noto Sans KR',      kr:true },
+  { label:'나눔명조',        family:'Nanum Myeongjo',    kr:true },
+  { label:'나눔 펜 손글씨',  family:'Nanum Pen Script',  kr:true },
+  { label:'주아',            family:'Jua',               kr:true },
+  { label:'송명',            family:'Song Myung',        kr:true },
+  { label:'Playfair Display',  family:'Playfair Display' },
+  { label:'EB Garamond',       family:'EB Garamond' },
+  { label:'Montserrat',        family:'Montserrat' },
+  { label:'Libre Baskerville', family:'Libre Baskerville' },
+  { label:'Cinzel',            family:'Cinzel' },
+  { label:'Bebas Neue',        family:'Bebas Neue' },
+  { label:'Dancing Script',    family:'Dancing Script' },
+  { label:'Great Vibes',       family:'Great Vibes' },
+];
+/* 참고: 볼드/이탤릭 실물이 없는 폰트(주아, 나눔 펜 등)는 브라우저가 합성해서 보여줍니다. */
+
+function fillFontSelect(sel, defaultFamily){
+  const gKr = document.createElement('optgroup'); gKr.label = '한글';
+  const gEn = document.createElement('optgroup'); gEn.label = '영문';
+  FONTS.forEach(f=>{
+    const o = document.createElement('option');
+    o.value = f.family; o.textContent = f.label;
+    o.style.fontFamily = '"' + f.family + '"';
+    (f.kr ? gKr : gEn).appendChild(o);
+  });
+  sel.appendChild(gKr); sel.appendChild(gEn);
+  sel.value = defaultFamily;
+}
+function fontStr(cfg, size){
+  return (cfg.italic ? 'italic ' : '') + (cfg.bold ? '700 ' : '400 ') +
+         size + 'px "' + cfg.font + '", sans-serif';
+}
+function loadFont(cfg){
+  if (document.fonts && document.fonts.load){
+    return document.fonts.load(fontStr(cfg, 20), '가나다 Abc').catch(()=>{});
+  }
+  return Promise.resolve();
+}
+
 /* ───────── 기본 설정 ───────── */
-const W = 1600, H = 900;
-const m = 40;                 // 바깥 여백
+const W = 1600, SH = 900;     // SH: 스트립 영역 높이 (하단 공간은 그 아래에 추가)
+const m = 40;
 const MAXN = 6;
 const $ = id=>document.getElementById(id);
 
 const state = {
-  sel:-1,
-  n:4,                        // 칸 수
-  s:60,                       // 사선 기울기
-  g:24,                       // 칸 간격
+  sel:null,                    // 0..n-1 | 'f'(하단 사진) | null
+  n:4, s:60, g:24,
   bg:'#ffffff',
+  pattern:'none', patColor:'#e4e4df', patSize:42,
   dur:1.5,
-  gifScale:0.5,
+  gifScale:0.7,
   playing:false,
-  name:{ pos:'bottom', color:'#ffffff', size:44, shadow:true, bar:true },
+  name:{ pos:'bottom', color:'#ffffff', size:44, shadow:true, bar:true,
+         font:'Gowun Batang', bold:true, italic:false },
+  footer:{ on:false, h:170,
+           text:'', font:'Gowun Dodum', bold:false, italic:false,
+           size:40, color:'#16181f', align:'center',
+           img:null, ox:0, oy:0, scale:1, fx:false, fy:false },
 };
 
-/* 슬롯: 칸 수가 바뀌어도 사진·이름 유지되도록 MAXN개 상시 보관 */
-const slots = Array.from({ length:MAXN }, (_, i)=>({
+const slots = Array.from({ length:MAXN }, ()=>({
   img:null, ox:0, oy:0, scale:1, fx:false, fy:false, name:'',
 }));
 
-/* ───────── 지오메트리 ─────────
-   바깥 테두리는 수직, 안쪽 경계선만 사선(상단 +s / 하단 −s).
-   모든 칸의 가로 폭이 같아 면적 동일. */
+function HT(){ return SH + (state.footer.on ? state.footer.h : 0); }
+function targetOf(sel){ return sel === 'f' ? state.footer : slots[sel]; }
+
+/* ───────── 지오메트리 ───────── */
 let panels = [];
 function buildGeometry(){
   const n = state.n, s = state.s, g = state.g;
   const Wi = W - 2 * m;
-  const bx = k=>m + k * (Wi / n);        // k번째 경계선의 중앙 x
+  const bx = k=>m + k * (Wi / n);
   panels = [];
   for (let i = 0; i < n; i++){
     const xTL = i === 0     ? m     : bx(i)   + s + g / 2;
     const xTR = i === n - 1 ? W - m : bx(i+1) + s - g / 2;
     const xBL = i === 0     ? m     : bx(i)   - s + g / 2;
     const xBR = i === n - 1 ? W - m : bx(i+1) - s - g / 2;
-    const poly = [[xTL, m], [xTR, m], [xBR, H - m], [xBL, H - m]];
-    const xs = poly.map(q=>q[0]), ys = poly.map(q=>q[1]);
+    const poly = [[xTL, m], [xTR, m], [xBR, SH - m], [xBL, SH - m]];
+    const xs = poly.map(q=>q[0]);
     const x0 = Math.min(...xs), x1 = Math.max(...xs);
-    /* 등장 방향: 사선 벡터를 따라, 짝수 칸은 위에서 아래로 / 홀수 칸은 아래에서 위로 */
-    const dl = Math.hypot(-2 * s, H - 2 * m) || 1;
-    const dir = [(-2 * s) / dl, (H - 2 * m) / dl];
-    const travel = (H / Math.abs(dir[1] || 1)) * 1.06;
+    const dl = Math.hypot(-2 * s, SH - 2 * m) || 1;
+    const dir = [(-2 * s) / dl, (SH - 2 * m) / dl];
+    const travel = (SH / Math.abs(dir[1] || 1)) * 1.06;
     const sign = i % 2 === 0 ? -1 : 1;
     panels.push({
       poly,
-      bb:{ x:x0, y:m, w:x1 - x0, h:H - 2 * m, cx:(x0 + x1) / 2, cy:H / 2 },
+      bb:{ x:x0, y:m, w:x1 - x0, h:SH - 2 * m, cx:(x0 + x1) / 2, cy:SH / 2 },
       cxTop:(xTL + xTR) / 2,
       cxBot:(xBL + xBR) / 2,
       from:[dir[0] * travel * sign, dir[1] * travel * sign],
@@ -330,10 +450,10 @@ buildGeometry();
 /* ───────── 렌더 유틸 ───────── */
 const view = $('view');
 const vctx = view.getContext('2d');
+function resizeCanvas(){ view.height = HT(); draw(); }
 
 function clamp01(v){ return Math.min(1, Math.max(0, v)); }
 function ease(t){ return 1 - Math.pow(1 - t, 3); }
-function sub(t, a, b){ return ease(clamp01((t - a) / (b - a))); }
 function panelProg(p, t){ return ease(clamp01((t - p.delay) / 0.56)); }
 function pathPoly(ctx, poly){
   ctx.beginPath();
@@ -341,20 +461,49 @@ function pathPoly(ctx, poly){
   for (let i = 1; i < poly.length; i++) ctx.lineTo(poly[i][0], poly[i][1]);
   ctx.closePath();
 }
-/* 스트립 중심선 위 y좌표에서의 x (사선을 따라 이름을 칸 가운데에 놓기 위함) */
 function centerlineX(p, y){
-  const r = (H - m - y) / (H - 2 * m);   // 하단 0 → 상단 1
+  const r = (SH - m - y) / (SH - 2 * m);
   return p.cxBot + (p.cxTop - p.cxBot) * r;
 }
+function splitLines(text){ return text.split('\\n').join('\n').split('\n'); }
 
-/* ───────── 메인 렌더 ─────────
-   pT: 슬라이드 진행도. 이름은 각 칸과 함께 올라옴 */
+/* 배경 패턴 (스트립 영역에만) */
+function drawPattern(ctx){
+  if (state.pattern === 'none') return;
+  const cell = state.patSize;
+  ctx.save();
+  ctx.beginPath(); ctx.rect(0, 0, W, SH); ctx.clip();
+  ctx.strokeStyle = state.patColor;
+  ctx.fillStyle = state.patColor;
+  ctx.lineWidth = 1.6;
+  if (state.pattern === 'grid'){
+    ctx.beginPath();
+    for (let x = 0; x <= W; x += cell){ ctx.moveTo(x, 0); ctx.lineTo(x, SH); }
+    for (let y = 0; y <= SH; y += cell){ ctx.moveTo(0, y); ctx.lineTo(W, y); }
+    ctx.stroke();
+  } else if (state.pattern === 'dots'){
+    const r = Math.max(1.6, cell * 0.07);
+    for (let x = cell / 2; x < W; x += cell)
+      for (let y = cell / 2; y < SH; y += cell){
+        ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill();
+      }
+  } else if (state.pattern === 'diag'){
+    ctx.beginPath();
+    for (let x = -SH; x < W; x += cell){ ctx.moveTo(x, 0); ctx.lineTo(x + SH, SH); }
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+/* ───────── 메인 렌더 ───────── */
 function render(ctx, pT, opts = {}){
   const sc = opts.scale || 1;
+  const Hn = HT();
   ctx.save();
   ctx.setTransform(sc, 0, 0, sc, 0, 0);
   ctx.fillStyle = state.bg;
-  ctx.fillRect(0, 0, W, H);
+  ctx.fillRect(0, 0, W, Hn);
+  drawPattern(ctx);
 
   /* 1. 스트립 */
   panels.forEach((p, i)=>{
@@ -392,9 +541,9 @@ function render(ctx, pT, opts = {}){
     ctx.save();
     ctx.translate(p.from[0] * (1 - pr), p.from[1] * (1 - pr));
     const bottom = nm.pos === 'bottom';
-    const y = bottom ? H - m - 44 - nm.size / 2 : m + 44 + nm.size / 2;
+    const y = bottom ? SH - m - 44 - nm.size / 2 : m + 44 + nm.size / 2;
     const x = centerlineX(p, y);
-    ctx.font = '700 ' + nm.size + 'px "Gowun Batang", serif';
+    ctx.font = fontStr(nm, nm.size);
     ctx.fillStyle = nm.color;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -408,14 +557,56 @@ function render(ctx, pT, opts = {}){
     ctx.restore();
   });
 
-  /* 3. 선택 표시 (편집 화면에서만) */
-  if (opts.edit && state.sel >= 0 && state.sel < state.n){
+  /* 3. 하단 백지 공간 */
+  const f = state.footer;
+  if (f.on){
+    const fy = SH, fh = f.h;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, fy, W, fh);
+
+    if (f.img){
+      ctx.save();
+      ctx.beginPath(); ctx.rect(0, fy, W, fh); ctx.clip();
+      const base = (fh * 0.9) / f.img.height;
+      const k = base * f.scale;
+      ctx.translate(W / 2 + f.ox, fy + fh / 2 + f.oy);
+      ctx.scale(f.fx ? -k : k, f.fy ? -k : k);
+      ctx.drawImage(f.img, -f.img.width / 2, -f.img.height / 2);
+      ctx.restore();
+    }
+    if (f.text){
+      ctx.save();
+      ctx.font = fontStr(f, f.size);
+      ctx.fillStyle = f.color;
+      ctx.textBaseline = 'middle';
+      let x;
+      if (f.align === 'left'){ ctx.textAlign = 'left'; x = m + 14; }
+      else if (f.align === 'right'){ ctx.textAlign = 'right'; x = W - m - 14; }
+      else { ctx.textAlign = 'center'; x = W / 2; }
+      const lines = splitLines(f.text);
+      const lh = f.size * 1.3;
+      const y0 = fy + fh / 2 - lh * (lines.length - 1) / 2;
+      lines.forEach((ln, i)=>ctx.fillText(ln, x, y0 + lh * i));
+      ctx.restore();
+    }
+  }
+
+  /* 4. 선택 표시 (편집 화면에서만) */
+  if (opts.edit && state.sel !== null){
     ctx.save();
     ctx.lineWidth = 5;
     ctx.setLineDash([16, 12]);
     ctx.strokeStyle = '#2f7a6f';
-    pathPoly(ctx, panels[state.sel].poly);
-    ctx.stroke();
+    if (state.sel === 'f'){
+      if (f.on && f.img){
+        const k = (f.h * 0.9) / f.img.height * f.scale;
+        const w2 = f.img.width * k / 2, h2 = f.img.height * k / 2;
+        ctx.strokeRect(W / 2 + f.ox - w2, SH + f.h / 2 + f.oy - h2, w2 * 2, h2 * 2);
+      }
+    } else if (state.sel < state.n){
+      pathPoly(ctx, panels[state.sel].poly);
+      ctx.stroke();
+    }
     ctx.restore();
   }
   ctx.restore();
@@ -427,7 +618,7 @@ if (document.fonts && document.fonts.ready) document.fonts.ready.then(draw);
 /* ───────── 선택 · 드래그 · 확대 ───────── */
 function toCanvas(e){
   const r = view.getBoundingClientRect();
-  return [ (e.clientX - r.left) * W / r.width, (e.clientY - r.top) * H / r.height ];
+  return [ (e.clientX - r.left) * W / r.width, (e.clientY - r.top) * HT() / r.height ];
 }
 function inPoly(pt, poly){
   let inside = false;
@@ -442,17 +633,35 @@ function panelAt(pt){
   for (let i = 0; i < state.n; i++) if (inPoly(pt, panels[i].poly)) return i;
   return -1;
 }
+function hitFooterImg(pt){
+  const f = state.footer;
+  if (!f.on || !f.img) return false;
+  const k = (f.h * 0.9) / f.img.height * f.scale;
+  return Math.abs(pt[0] - (W / 2 + f.ox)) <= f.img.width * k / 2 &&
+         Math.abs(pt[1] - (SH + f.h / 2 + f.oy)) <= f.img.height * k / 2;
+}
 
 let drag = null;
 view.addEventListener('pointerdown', e=>{
   if (state.playing) return;
   const pt = toCanvas(e);
+
+  if (pt[1] > SH){                              // 하단 공간 클릭
+    if (hitFooterImg(pt)){
+      selectTarget('f');
+      drag = { kind:'f', sx:pt[0], sy:pt[1], ox:state.footer.ox, oy:state.footer.oy };
+      view.setPointerCapture(e.pointerId);
+      view.style.cursor = 'grabbing';
+    }
+    draw();
+    return;
+  }
   const idx = panelAt(pt);
   if (idx >= 0){
-    selectPanel(idx);
+    selectTarget(idx);
     const sl = slots[idx];
     if (sl.img){
-      drag = { idx, sx:pt[0], sy:pt[1], ox:sl.ox, oy:sl.oy };
+      drag = { kind:'p', idx, sx:pt[0], sy:pt[1], ox:sl.ox, oy:sl.oy };
       view.setPointerCapture(e.pointerId);
       view.style.cursor = 'grabbing';
     }
@@ -462,21 +671,21 @@ view.addEventListener('pointerdown', e=>{
 view.addEventListener('pointermove', e=>{
   if (!drag) return;
   const pt = toCanvas(e);
-  const sl = slots[drag.idx];
-  sl.ox = drag.ox + (pt[0] - drag.sx);
-  sl.oy = drag.oy + (pt[1] - drag.sy);
+  const t = drag.kind === 'f' ? state.footer : slots[drag.idx];
+  t.ox = drag.ox + (pt[0] - drag.sx);
+  t.oy = drag.oy + (pt[1] - drag.sy);
   draw();
 });
 ['pointerup','pointercancel'].forEach(ev=>view.addEventListener(ev, ()=>{
   drag = null; view.style.cursor = 'grab';
 }));
 view.addEventListener('wheel', e=>{
-  if (state.sel < 0) return;
-  const sl = slots[state.sel];
-  if (!sl.img) return;
+  if (state.sel === null) return;
+  const t = targetOf(state.sel);
+  if (!t.img) return;
   e.preventDefault();
-  sl.scale = Math.min(4, Math.max(0.3, sl.scale * (e.deltaY < 0 ? 1.06 : 0.94)));
-  scaleSlider.value = sl.scale;
+  t.scale = Math.min(4, Math.max(0.15, t.scale * (e.deltaY < 0 ? 1.06 : 0.94)));
+  scaleSlider.value = t.scale;
   draw();
 }, { passive:false });
 
@@ -485,8 +694,10 @@ view.addEventListener('drop', e=>{
   e.preventDefault();
   const f = e.dataTransfer.files && e.dataTransfer.files[0];
   if (!f || !f.type.startsWith('image/')) return;
-  const idx = panelAt(toCanvas(e));
-  if (idx >= 0){ selectPanel(idx); loadImageTo(idx, f); }
+  const pt = toCanvas(e);
+  if (pt[1] > SH && state.footer.on){ selectTarget('f'); loadImageTo('f', f); return; }
+  const idx = panelAt(pt);
+  if (idx >= 0){ selectTarget(idx); loadImageTo(idx, f); }
 });
 
 /* ───────── 컨트롤 ───────── */
@@ -495,17 +706,17 @@ const scaleSlider = $('scale');
 const fileInput = $('file');
 let pendingUpload = null;
 
-function selectPanel(i){
-  state.sel = i;
-  selName.textContent = (i + 1) + '번 칸';
-  scaleSlider.value = slots[i].scale;
+function selectTarget(sel){
+  state.sel = sel;
+  selName.textContent = sel === 'f' ? '하단 사진' : (sel + 1) + '번 칸';
+  scaleSlider.value = targetOf(sel).scale;
 }
-function loadImageTo(idx, file){
+function loadImageTo(sel, file){
   const url = URL.createObjectURL(file);
   const img = new Image();
   img.onload = ()=>{
-    const sl = slots[idx];
-    sl.img = img; sl.ox = 0; sl.oy = 0; sl.scale = 1; sl.fx = false; sl.fy = false;
+    const t = targetOf(sel);
+    t.img = img; t.ox = 0; t.oy = 0; t.scale = 1; t.fx = false; t.fy = false;
     scaleSlider.value = 1;
     draw();
   };
@@ -513,49 +724,68 @@ function loadImageTo(idx, file){
 }
 
 $('btnUpload').onclick = ()=>{
-  if (state.sel < 0){ selectPanel(0); draw(); }
+  if (state.sel === null){ selectTarget(0); draw(); }
   pendingUpload = state.sel;
   fileInput.click();
+};
+$('btnFooterImg').onclick = ()=>{
+  if (!state.footer.on){
+    state.footer.on = true;
+    $('footerOn').checked = true;
+    resizeCanvas();
+  }
+  selectTarget('f');
+  pendingUpload = 'f';
+  fileInput.click();
+  draw();
 };
 fileInput.onchange = ()=>{
   if (fileInput.files[0] && pendingUpload !== null) loadImageTo(pendingUpload, fileInput.files[0]);
   fileInput.value = ''; pendingUpload = null;
 };
 scaleSlider.oninput = ()=>{
-  if (state.sel >= 0){ slots[state.sel].scale = parseFloat(scaleSlider.value); draw(); }
+  if (state.sel !== null){ targetOf(state.sel).scale = parseFloat(scaleSlider.value); draw(); }
 };
 $('btnFlipH').onclick = ()=>{
-  if (state.sel >= 0 && slots[state.sel].img){ slots[state.sel].fx = !slots[state.sel].fx; draw(); }
+  if (state.sel !== null && targetOf(state.sel).img){ const t = targetOf(state.sel); t.fx = !t.fx; draw(); }
 };
 $('btnFlipV').onclick = ()=>{
-  if (state.sel >= 0 && slots[state.sel].img){ slots[state.sel].fy = !slots[state.sel].fy; draw(); }
+  if (state.sel !== null && targetOf(state.sel).img){ const t = targetOf(state.sel); t.fy = !t.fy; draw(); }
 };
 $('btnReset').onclick = ()=>{
-  if (state.sel < 0) return;
-  const sl = slots[state.sel];
-  sl.ox = 0; sl.oy = 0; sl.scale = 1; sl.fx = false; sl.fy = false;
+  if (state.sel === null) return;
+  const t = targetOf(state.sel);
+  t.ox = 0; t.oy = 0; t.scale = 1; t.fx = false; t.fy = false;
   scaleSlider.value = 1; draw();
 };
 $('btnClear').onclick = ()=>{
-  if (state.sel < 0) return;
-  slots[state.sel].img = null; draw();
+  if (state.sel === null) return;
+  targetOf(state.sel).img = null; draw();
 };
 
-/* 구성 */
+/* 구성 · 배경 */
 $('countSeg').addEventListener('click', e=>{
   const b = e.target.closest('button'); if (!b) return;
   state.n = +b.dataset.v;
   document.querySelectorAll('#countSeg button').forEach(x=>x.classList.toggle('on', x === b));
-  if (state.sel >= state.n) state.sel = -1, selName.textContent = '없음';
+  if (state.sel !== 'f' && state.sel !== null && state.sel >= state.n){
+    state.sel = null; selName.textContent = '없음';
+  }
   buildGeometry();
   buildNameInputs();
   draw();
 });
 $('slant').oninput = e=>{ state.s = +e.target.value; buildGeometry(); draw(); };
 $('gap').oninput   = e=>{ state.g = +e.target.value; buildGeometry(); draw(); };
-$('bgColor').oninput = e=>{ state.bg = e.target.value; draw(); };
+$('patternSeg').addEventListener('click', e=>{
+  const b = e.target.closest('button'); if (!b) return;
+  state.pattern = b.dataset.v;
+  document.querySelectorAll('#patternSeg button').forEach(x=>x.classList.toggle('on', x === b));
+  draw();
+});
+$('patSize').oninput = e=>{ state.patSize = +e.target.value; draw(); };
 
-/* 이름 입력칸 — 칸 수에 맞춰 동적 생성, 값은 슬롯에 보존 */
+/* 이름 입력칸 */
 function buildNameInputs(){
   const grid = $('nameGrid');
   grid.innerHTML = '';
@@ -583,6 +813,45 @@ $('namePosSeg').addEventListener('click', e=>{
 $('nameSize').oninput    = e=>{ state.name.size = +e.target.value; draw(); };
 $('nameShadow').onchange = e=>{ state.name.shadow = e.target.checked; draw(); };
 $('nameBar').onchange    = e=>{ state.name.bar = e.target.checked; draw(); };
+
+/* 폰트 선택 + 볼드/기울임 (이름 · 하단 공용 패턴) */
+fillFontSelect($('nameFont'), state.name.font);
+fillFontSelect($('footerFont'), state.footer.font);
+function bindFontControls(prefix, cfg){
+  $(prefix + 'Font').onchange = e=>{
+    cfg.font = e.target.value;
+    loadFont(cfg).then(draw);
+    draw();
+  };
+  $(prefix + 'Bold').onchange = e=>{
+    cfg.bold = e.target.checked;
+    loadFont(cfg).then(draw);
+    draw();
+  };
+  $(prefix + 'Italic').onchange = e=>{
+    cfg.italic = e.target.checked;
+    loadFont(cfg).then(draw);
+    draw();
+  };
+}
+bindFontControls('name', state.name);
+bindFontControls('footer', state.footer);
+
+/* 하단 공간 */
+$('footerOn').onchange = e=>{
+  state.footer.on = e.target.checked;
+  if (!state.footer.on && state.sel === 'f'){ state.sel = null; selName.textContent = '없음'; }
+  resizeCanvas();
+};
+$('footerH').oninput = e=>{ state.footer.h = +e.target.value; if (state.footer.on) resizeCanvas(); };
+$('footerText').oninput = e=>{ state.footer.text = e.target.value; draw(); };
+$('footerSize').oninput = e=>{ state.footer.size = +e.target.value; draw(); };
+$('footerAlignSeg').addEventListener('click', e=>{
+  const b = e.target.closest('button'); if (!b) return;
+  state.footer.align = b.dataset.v;
+  document.querySelectorAll('#footerAlignSeg button').forEach(x=>x.classList.toggle('on', x === b));
+  draw();
+});
 
 /* 컬러 피커 ↔ 헥스코드 양방향 동기화 */
 function normalizeHex(v){
@@ -616,7 +885,10 @@ function bindColorPair(pickerId, hexId, apply){
     hex.classList.remove('bad');
   };
 }
-bindColorPair('nameColor', 'nameColorHex', v=>state.name.color = v);
+bindColorPair('bgColor',     'bgColorHex',     v=>state.bg = v);
+bindColorPair('patColor',    'patColorHex',    v=>state.patColor = v);
+bindColorPair('nameColor',   'nameColorHex',   v=>state.name.color = v);
+bindColorPair('footerColor', 'footerColorHex', v=>state.footer.color = v);
 
 $('dur').onchange = e=>{
   state.dur = Math.min(4, Math.max(0.5, parseFloat(e.target.value) || 1.5));
@@ -628,9 +900,7 @@ $('gifSizeSeg').addEventListener('click', e=>{
   document.querySelectorAll('#gifSizeSeg button').forEach(x=>x.classList.toggle('on', x === b));
 });
 
-/* ───────── 타임라인: 슬라이드만 (이름은 칸과 함께) ───────── */
-function totalSec(){ return state.dur; }
-
+/* ───────── 재생 ───────── */
 $('btnPlay').onclick = ()=>{
   if (state.playing) return;
   state.playing = true;
@@ -638,7 +908,7 @@ $('btnPlay').onclick = ()=>{
   (function step(now){
     const el = (now - t0) / 1000;
     render(vctx, clamp01(el / state.dur), { edit:false });
-    if (el < totalSec()) requestAnimationFrame(step);
+    if (el < state.dur) requestAnimationFrame(step);
     else { state.playing = false; draw(); }
   })(t0);
 };
@@ -651,11 +921,16 @@ function download(blob, name){
   a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href), 5000);
 }
+async function ensureAllFonts(){
+  await Promise.all([loadFont(state.name), loadFont(state.footer)]);
+}
 function exportStill(type){
-  const c = document.createElement('canvas');
-  c.width = W; c.height = H;
-  render(c.getContext('2d'), 1, {});
-  c.toBlob(b=>download(b, 'lineup.' + type), type === 'jpg' ? 'image/jpeg' : 'image/png', 0.92);
+  ensureAllFonts().then(()=>{
+    const c = document.createElement('canvas');
+    c.width = W; c.height = HT();
+    render(c.getContext('2d'), 1, {});
+    c.toBlob(b=>download(b, 'lineup.' + type), type === 'jpg' ? 'image/jpeg' : 'image/png', 0.95);
+  });
 }
 $('btnPng').onclick = ()=>exportStill('png');
 $('btnJpg').onclick = ()=>exportStill('jpg');
@@ -673,17 +948,18 @@ $('btnGif').onclick = async ()=>{
   btn.disabled = true;
   gifStatus.textContent = '프레임 준비 중…';
   try{
+    await ensureAllFonts();
     const wUrl = await getWorkerUrl();
     const gs = state.gifScale;
-    const gw = Math.round(W * gs), gh = Math.round(H * gs);
-    const gif = new GIF({ workers:2, quality:8, width:gw, height:gh, workerScript:wUrl });
+    const gw = Math.round(W * gs), gh = Math.round(HT() * gs);
+    /* quality 낮을수록 고화질 (팔레트 정밀도 ↑) — 화질 우선 설정 */
+    const gif = new GIF({ workers:3, quality:4, width:gw, height:gh, workerScript:wUrl });
     const c = document.createElement('canvas');
     c.width = gw; c.height = gh;
     const ctx = c.getContext('2d');
 
     const fps = 25;
-    const total = totalSec();
-    const n = Math.round(fps * total);
+    const n = Math.round(fps * state.dur);
     render(ctx, 0, { scale:gs });
     gif.addFrame(ctx, { copy:true, delay:300 });            // 빈 화면 잠깐
     for (let f = 1; f <= n; f++){
@@ -696,9 +972,9 @@ $('btnGif').onclick = async ()=>{
     gif.on('progress', p=>{ gifStatus.textContent = 'GIF 생성 ' + Math.round(p * 100) + '%'; });
     gif.on('finished', blob=>{
       download(blob, 'lineup.gif');
-      gifStatus.textContent = '완료 ✦';
+      gifStatus.textContent = '완료 ✦ (' + (blob.size / 1048576).toFixed(1) + 'MB)';
       btn.disabled = false;
-      setTimeout(()=>gifStatus.textContent = '', 3000);
+      setTimeout(()=>gifStatus.textContent = '', 4000);
     });
     gif.render();
   } catch(err){
