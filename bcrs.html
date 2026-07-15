@@ -16,6 +16,10 @@
     --card:#ffffff;     /* 카드 배경 (헥스 입력) */
     --ink:#2b2b2b;      /* 카드 글자 (헥스 입력) */
     --accent:#8c4a5a;   /* 포인트 (헥스 입력) */
+    /* ── 아래는 위 3색에서 JS가 자동 계산 (html2canvas 호환용) ── */
+    --ink-45:rgba(43,43,43,.45); --ink-48:rgba(43,43,43,.48); --ink-55:rgba(43,43,43,.55);
+    --ink-60:rgba(43,43,43,.60); --ink-72:rgba(43,43,43,.72); --ink-82:rgba(43,43,43,.82);
+    --accent-tint:#f6eef0; --track-bg:#efe1e5;
   }
   *{box-sizing:border-box}
   html{ -webkit-text-size-adjust:100%; }
@@ -135,12 +139,12 @@
   }
   .bizcard .top{ display:flex; justify-content:space-between; align-items:flex-start; }
   .bizcard .co{ font-size:12.5px; font-weight:700; letter-spacing:.18em; color:var(--accent); }
-  .bizcard .dept{ font-size:10.5px; color:color-mix(in srgb, var(--ink) 60%, transparent); letter-spacing:.06em; }
+  .bizcard .dept{ font-size:10.5px; color:var(--ink-60); letter-spacing:.06em; }
   .bizcard .idblock{ margin-top:2px; }
   .bizcard .nm{ font-size:24px; font-weight:700; letter-spacing:.05em; line-height:1.2; }
-  .bizcard .ti{ font-size:12px; margin-top:2px; color:color-mix(in srgb, var(--ink) 72%, transparent); letter-spacing:.08em; }
+  .bizcard .ti{ font-size:12px; margin-top:2px; color:var(--ink-72); letter-spacing:.08em; }
   .bizcard .brule{ width:26px; border:none; border-top:2px solid var(--accent); margin:10px 0 0 0; }
-  .bizcard .contact{ font-size:10.5px; line-height:1.85; letter-spacing:.03em; color:color-mix(in srgb, var(--ink) 82%, transparent); }
+  .bizcard .contact{ font-size:10.5px; line-height:1.85; letter-spacing:.03em; color:var(--ink-82); }
   .bizcard .contact b{ font-weight:500; color:var(--accent); margin-right:6px; }
 
   /* ══ 관계 시트 ══ */
@@ -160,11 +164,11 @@
   .pframe{
     width:108px; height:108px; border-radius:50%;
     border:1.5px solid var(--accent);
-    background-color:color-mix(in srgb, var(--accent) 8%, var(--card));
+    background-color:var(--accent-tint);
     background-repeat:no-repeat;
     overflow:hidden; cursor:grab; touch-action:none;
     display:flex; align-items:center; justify-content:center;
-    font-size:11px; color:color-mix(in srgb, var(--ink) 45%, transparent);
+    font-size:11px; color:var(--ink-45);
   }
   .pframe:active{ cursor:grabbing; }
   .pairline{
@@ -182,7 +186,7 @@
   .g .track{
     position:relative; height:20px; display:flex; align-items:center;
     letter-spacing:5px; font-size:15px;
-    color:color-mix(in srgb, var(--accent) 15%, var(--card));
+    color:var(--track-bg);
     overflow:hidden; white-space:nowrap;
   }
   .g .fill{
@@ -190,13 +194,13 @@
     letter-spacing:5px; font-size:15px; color:var(--accent);
     overflow:hidden; white-space:nowrap;
   }
-  .g .gnum{ font-size:11.5px; text-align:right; color:color-mix(in srgb, var(--ink) 55%, transparent); }
+  .g .gnum{ font-size:11.5px; text-align:right; color:var(--ink-55); }
   .tags{ display:flex; gap:7px; flex-wrap:wrap; justify-content:center; margin-top:16px; }
   .tag{ font-size:12px; padding:4px 12px; border-radius:14px; border:1px solid var(--accent); color:var(--accent); }
   .memo{ margin-top:16px; font-size:13.5px; line-height:1.75; white-space:pre-wrap; }
   .footline{
     margin-top:18px; font-size:10.5px; letter-spacing:.22em;
-    color:color-mix(in srgb, var(--ink) 48%, transparent);
+    color:var(--ink-48);
   }
 
   /* ── 출력 ── */
@@ -328,10 +332,7 @@
       </div>
 
       <div class="outbar">
-        <button class="out" id="jsonSave">기록 저장</button>
-        <button class="out" id="jsonLoad">기록 불러오기</button>
-        <input type="file" id="jsonFile" accept="application/json" class="hidden">
-        <button class="out" id="pngBtn">PNG로 찍기</button>
+        <button class="out" id="pngBtn">이미지로 저장 (PNG)</button>
       </div>
     </div>
   </div>
@@ -352,6 +353,13 @@
     {inp:'hexInk', sw:'swInk', varName:'--ink'},
     {inp:'hexAccent', sw:'swAccent', varName:'--accent'},
   ];
+  function hexToRgb(v){
+    v=v.trim(); if(v[0]==='#') v=v.slice(1);
+    if(v.length===3) v=v.split('').map(c=>c+c).join('');
+    if(!/^[0-9a-fA-F]{6}$/.test(v)) return null;
+    return [parseInt(v.slice(0,2),16),parseInt(v.slice(2,4),16),parseInt(v.slice(4,6),16)];
+  }
+  function blend(a,p,b){ return a.map((c,i)=>Math.round(c*p + b[i]*(1-p))); }
   function applyHex(){
     HEX.forEach(h=>{
       let v=$(h.inp).value.trim();
@@ -361,6 +369,15 @@
         $(h.sw).style.background=v;
       }
     });
+    // 파생색 계산 (color-mix 대신 일반 rgba/rgb — 이미지 저장 호환)
+    const ink=hexToRgb($('hexInk').value)||[43,43,43];
+    const card=hexToRgb($('hexCard').value)||[255,255,255];
+    const accent=hexToRgb($('hexAccent').value)||[140,74,90];
+    [45,48,55,60,72,82].forEach(a=>
+      rootS.setProperty('--ink-'+a, 'rgba('+ink[0]+','+ink[1]+','+ink[2]+','+(a/100)+')'));
+    const tint=blend(accent,0.08,card), track=blend(accent,0.15,card);
+    rootS.setProperty('--accent-tint','rgb('+tint.join(',')+')');
+    rootS.setProperty('--track-bg','rgb('+track.join(',')+')');
   }
   HEX.forEach(h=>$(h.inp).addEventListener('input',()=>{ applyHex(); save(); }));
 
@@ -599,31 +616,22 @@
   function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state())); }catch(e){} }
   function restore(){ try{ apply(JSON.parse(localStorage.getItem(KEY)||'null')); }catch(e){} }
 
-  $('jsonSave').addEventListener('click',()=>{
-    const blob=new Blob([JSON.stringify(state(),null,2)],{type:'application/json'});
-    const a=document.createElement('a');
-    const nm = mode==='card' ? ($('bName').value||'명함') : (($('rA').value||'A')+'_'+($('rB').value||'B'));
-    a.href=URL.createObjectURL(blob); a.download='기록_'+nm+'.json';
-    a.click(); URL.revokeObjectURL(a.href); flash('기록을 저장했습니다');
-  });
-  $('jsonLoad').addEventListener('click',()=>$('jsonFile').click());
-  $('jsonFile').addEventListener('change',e=>{
-    const f=e.target.files[0]; if(!f) return;
-    const r=new FileReader();
-    r.onload=()=>{ try{ apply(JSON.parse(r.result)); save(); flash('기록을 불러왔습니다'); }catch(err){ flash('파일을 읽지 못했습니다'); } };
-    r.readAsText(f); e.target.value='';
-  });
-
   $('pngBtn').addEventListener('click',()=>{
     if(typeof html2canvas!=='function'){ flash('이미지 기능을 불러오지 못했습니다'); return; }
     const el = mode==='card' ? $('cardView') : $('relView');
-    flash('찍는 중…');
-    html2canvas(el,{scale:2,backgroundColor:null}).then(cv=>{
-      const a=document.createElement('a');
-      a.href=cv.toDataURL('image/png');
-      a.download = (mode==='card'?($('bName').value||'명함'):'관계시트')+'.png';
-      a.click();
-    }).catch(()=>flash('이미지 저장에 실패했습니다'));
+    flash('저장 중…');
+    html2canvas(el,{scale:3, backgroundColor:null, useCORS:true, logging:false}).then(cv=>{
+      const name = (mode==='card'?($('bName').value||'명함'):'관계시트')+'.png';
+      cv.toBlob(blob=>{
+        if(!blob){ flash('이미지 저장에 실패했습니다'); return; }
+        const url=URL.createObjectURL(blob);
+        const a=document.createElement('a');
+        a.href=url; a.download=name;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(()=>URL.revokeObjectURL(url), 4000);
+        flash('저장했습니다');
+      }, 'image/png');
+    }).catch(err=>{ console.error(err); flash('이미지 저장에 실패했습니다'); });
   });
 
   /* 초기화 */
