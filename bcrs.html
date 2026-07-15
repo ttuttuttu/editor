@@ -67,7 +67,7 @@
   /* ── 모바일 확대 튐 방지: iOS는 16px 미만 입력칸에 포커스되면 화면을 확대함 ── */
   @media (max-width:880px){
     .fgroup input[type=text], .fgroup textarea,
-    .gauge-row input[type=text], .gauge-row select,
+    .gauge-row input[type=text], .gauge-row input[type=number],
     .hexrow input[type=text]{
       font-size:16px;
     }
@@ -83,19 +83,19 @@
   .hexrow input[type=text]:focus{ border-color:#2b2b2b; }
   .hexrow .sw{ width:30px; height:30px; border-radius:7px; border:1px solid var(--line); }
 
-  /* 게이지 행: [모양][이름][세기][삭제] */
+  /* 게이지 행: [이름][숫자][삭제] */
   .gauge-rows{ display:flex; flex-direction:column; gap:8px; }
-  .gauge-row{ display:grid; grid-template-columns:52px 1fr 76px 26px; gap:7px; align-items:center; }
-  .gauge-row select{
-    font-size:15px; padding:6px 2px; text-align:center;
-    border:1px solid var(--line); border-radius:7px; background:#fff; color:var(--accent);
-    outline:none; cursor:pointer; width:100%;
-  }
+  .gauge-row{ display:grid; grid-template-columns:1fr 66px 26px; gap:7px; align-items:center; }
   .gauge-row input[type=text]{
     font:inherit; font-size:13px; padding:7px 10px;
     border:1px solid var(--line); border-radius:7px; background:#fff; outline:none; width:100%;
   }
-  .gauge-row input[type=range]{ width:100%; accent-color:#2b2b2b; }
+  .gauge-row input[type=number]{
+    font:inherit; font-size:13px; padding:7px 8px; text-align:center;
+    border:1px solid var(--line); border-radius:7px; background:#fff; color:var(--accent);
+    outline:none; width:100%;
+  }
+  .gauge-row input[type=number]:focus, .gauge-row input[type=text]:focus{ border-color:#2b2b2b; }
   .gauge-row .del{
     width:26px; height:26px; border-radius:50%; cursor:pointer;
     border:1px solid var(--line); background:#fff; font-size:13px; line-height:1;
@@ -179,22 +179,19 @@
   .pairline .amp{ color:var(--accent); font-size:15px; }
   .relword{ text-align:center; font-size:12.5px; color:var(--accent); letter-spacing:.26em; margin-bottom:14px; }
   .rule{ border:none; border-top:1px solid var(--line); margin:14px 0; }
-  .gauges{ display:flex; flex-direction:column; gap:12px; margin-top:6px; }
-  .g{ display:grid; grid-template-columns:80px 1fr 34px; gap:10px; align-items:center; }
-  @media (max-width:880px){ .g{ grid-template-columns:68px 1fr 30px; gap:7px; } }
+  .gauges{ display:flex; flex-direction:column; gap:13px; margin-top:6px; }
+  .g{ display:grid; grid-template-columns:80px 1fr 40px; gap:12px; align-items:center; }
+  @media (max-width:880px){ .g{ grid-template-columns:68px 1fr 36px; gap:9px; } }
   .g .gname{ font-size:13.5px; }
   .g .track{
-    position:relative; height:20px; display:flex; align-items:center;
-    letter-spacing:5px; font-size:15px;
-    color:var(--track-bg);
-    overflow:hidden; white-space:nowrap;
+    position:relative; height:9px; border-radius:6px;
+    background:var(--track-bg); overflow:hidden;
   }
   .g .fill{
-    position:absolute; inset:0; display:flex; align-items:center;
-    letter-spacing:5px; font-size:15px; color:var(--accent);
-    overflow:hidden; white-space:nowrap;
+    position:absolute; left:0; top:0; bottom:0;
+    background:var(--accent); border-radius:6px; transition:width .25s ease;
   }
-  .g .gnum{ font-size:11.5px; text-align:right; color:var(--ink-55); }
+  .g .gnum{ font-size:12px; text-align:right; color:var(--ink-55); font-variant-numeric:tabular-nums; }
   .tags{ display:flex; gap:7px; flex-wrap:wrap; justify-content:center; margin-top:16px; }
   .tag{ font-size:12px; padding:4px 12px; border-radius:14px; border:1px solid var(--accent); color:var(--accent); }
   .memo{ margin-top:16px; font-size:13.5px; line-height:1.75; white-space:pre-wrap; }
@@ -219,6 +216,8 @@
   }
   .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
   .hidden{ display:none !important; }
+  /* 저장 시 테두리 없음 버전: 테두리·그림자 제거 */
+  .no-edge{ border:none !important; box-shadow:none !important; }
   @media (prefers-reduced-motion:reduce){ *{ transition:none !important; } }
 </style>
 </head>
@@ -282,7 +281,7 @@
         <div class="fgroup"><label>이름 B</label><input type="text" id="rB" placeholder="성춘향"></div>
         <div class="fgroup"><label>관계 한 단어</label><input type="text" id="rWord" placeholder="예: 공생 / 앙숙 / 소꿉지기"></div>
         <div class="fgroup">
-          <label>지표 <span style="letter-spacing:0">(맨 앞에서 모양을 지표마다 따로 고를 수 있어요)</span></label>
+          <label>지표 <span style="letter-spacing:0">(0~100 숫자를 넣으면 바가 그만큼 채워져요)</span></label>
           <div class="gauge-rows" id="gaugeRows"></div>
           <button class="addrow" id="addGauge">+ 지표 추가</button>
           <div class="hint">이름을 지우면 그 지표는 카드에서 빠져요</div>
@@ -332,7 +331,8 @@
       </div>
 
       <div class="outbar">
-        <button class="out" id="pngBtn">이미지로 저장 (PNG)</button>
+        <button class="out" id="pngEdge">테두리 포함 저장</button>
+        <button class="out" id="pngNoEdge">테두리 없이 저장</button>
       </div>
     </div>
   </div>
@@ -412,64 +412,39 @@
   ['bCo','bDept','bName','bTitle','bTel','bMail','bAddr','bWeb'].forEach(id=>
     $(id).addEventListener('input',()=>{ renderCard(); save(); }));
 
-  /* ══ 지표 모양: 동글동글한 세트, 지표마다 개별 선택 ══
-     \uFE0E = 텍스트 표시 강제 (모바일에서 이모지로 바뀌는 것 방지) */
-  const T='\uFE0E';
-  const GLYPHS=[
-    {name:'하트',     ch:'\u2665'+T},        /* ♥ */
-    {name:'빈하트',   ch:'\u2661'+T},        /* ♡ */
-    {name:'잎하트',   ch:'\u2765'+T},        /* ❥ */
-    {name:'리본하트', ch:'\u1863\u{10B69}'}, /* ᡣ𐭩 */
-    {name:'둥근하트', ch:'\u10E6'},          /* ღ */
-    {name:'별',       ch:'\u2605'+T},        /* ★ */
-    {name:'빈별',     ch:'\u269D'+T},        /* ⚝ */
-    {name:'반짝임',   ch:'\u2726'+T},        /* ✦ */
-    {name:'동글별',   ch:'\u272A'+T},        /* ✪ */
-    {name:'꽃',       ch:'\u273F'+T},        /* ✿ */
-    {name:'겹꽃',     ch:'\u2740'+T},        /* ❀ */
-    {name:'네잎',     ch:'\u2724'+T},        /* ✤ */
-    {name:'여덟잎',   ch:'\u274B'+T},        /* ❋ */
-    {name:'눈꽃잎',   ch:'\u273D'+T},        /* ✽ */
-    {name:'원',       ch:'\u25CF'+T},        /* ● */
-    {name:'과녁',     ch:'\u25C9'+T},        /* ◉ */
-    {name:'달',       ch:'\u263E'+T},        /* ☾ */
-    {name:'눈꽃',     ch:'\u2745'+T},        /* ❅ */
-  ];
-
-  /* ══ 게이지 행 ══ */
+  /* ══ 게이지 행: 이름 + 숫자(0~100) ══ */
   const DEFAULT_GAUGES=[
-    {name:'호감', val:70, glyph:GLYPHS[2].ch},   /* ❥ */
-    {name:'신뢰', val:55, glyph:GLYPHS[7].ch},   /* ✦ */
-    {name:'거리감', val:30, glyph:GLYPHS[1].ch}, /* ♡ */
-    {name:'긴장', val:45, glyph:GLYPHS[6].ch},   /* ⚝ */
+    {name:'호감', val:70},
+    {name:'신뢰', val:55},
+    {name:'거리감', val:30},
+    {name:'긴장', val:45},
   ];
   const gaugeRows=$('gaugeRows');
-  function addGaugeRow(name='', val=50, gl=GLYPHS[0].ch){
+  function addGaugeRow(name='', val=50){
     const row=document.createElement('div'); row.className='gauge-row';
-    const sel=document.createElement('select');
-    GLYPHS.forEach(g=>{
-      const o=document.createElement('option');
-      o.value=g.ch; o.textContent=g.ch; o.title=g.name;
-      if(g.ch===gl) o.selected=true;
-      sel.appendChild(o);
-    });
     const nameI=document.createElement('input');
     nameI.type='text'; nameI.placeholder='지표 이름'; nameI.value=name;
-    const rangeI=document.createElement('input');
-    rangeI.type='range'; rangeI.min=0; rangeI.max=100; rangeI.step=5; rangeI.value=val;
+    const numI=document.createElement('input');
+    numI.type='number'; numI.min=0; numI.max=100; numI.step=1; numI.value=val;
+    numI.addEventListener('input',()=>{
+      let v=parseInt(numI.value,10);
+      if(isNaN(v)) v=0;
+      v=Math.max(0,Math.min(100,v));
+      numI.value=numI.value===''? '' : v;
+    });
     const del=document.createElement('button');
     del.className='del'; del.title='삭제'; del.textContent='×';
     del.addEventListener('click',()=>{ row.remove(); renderRel(); save(); });
-    [sel,nameI,rangeI].forEach(el=>el.addEventListener('input',()=>{ renderRel(); save(); }));
-    row.append(sel,nameI,rangeI,del);
+    [nameI,numI].forEach(el=>el.addEventListener('input',()=>{ renderRel(); save(); }));
+    row.append(nameI,numI,del);
     gaugeRows.appendChild(row);
   }
   $('addGauge').addEventListener('click',()=>addGaugeRow());
   function gaugeData(){
     return [...gaugeRows.children].map(r=>{
-      const sel=r.querySelector('select');
-      const [t,g]=r.querySelectorAll('input');
-      return {name:t.value.trim(), val:+g.value, glyph:sel.value};
+      const [t,n]=r.querySelectorAll('input');
+      let v=parseInt(n.value,10); if(isNaN(v)) v=0; v=Math.max(0,Math.min(100,v));
+      return {name:t.value.trim(), val:v};
     }).filter(g=>g.name);
   }
 
@@ -567,14 +542,11 @@
     $('vB').textContent=$('rB').value||'B';
     const w=$('rWord').value.trim();
     $('vWord').textContent=w?('— '+w+' —'):''; $('vWord').style.display=w?'':'none';
-    $('vGauges').innerHTML = gaugeData().map(g=>{
-      const track=(g.glyph+' ').repeat(10).trim();
-      return '<div class="g"><div class="gname">'+esc(g.name)+'</div>'+
-        '<div class="track">'+track+
-          '<div class="fill" style="width:'+g.val+'%">'+track+'</div>'+
-        '</div>'+
-        '<div class="gnum">'+g.val+'</div></div>';
-    }).join('');
+    $('vGauges').innerHTML = gaugeData().map(g=>
+      '<div class="g"><div class="gname">'+esc(g.name)+'</div>'+
+      '<div class="track"><div class="fill" style="width:'+g.val+'%"></div></div>'+
+      '<div class="gnum">'+g.val+'</div></div>'
+    ).join('');
     const tags=$('rTags').value.split(',').map(t=>t.trim()).filter(Boolean);
     $('vRTags').innerHTML=tags.map(t=>'<span class="tag">'+esc(t)+'</span>').join('');
     $('vRTags').style.display=tags.length?'':'none';
@@ -605,7 +577,7 @@
     if(s.biz) Object.entries(s.biz).forEach(([k,v])=>{ if($(k)) $(k).value=v; });
     if(s.rel) Object.entries(s.rel).forEach(([k,v])=>{ if($(k)) $(k).value=v; });
     gaugeRows.innerHTML='';
-    (s.gauges&&s.gauges.length? s.gauges : DEFAULT_GAUGES).forEach(g=>addGaugeRow(g.name, g.val, g.glyph||GLYPHS[0].ch));
+    (s.gauges&&s.gauges.length? s.gauges : DEFAULT_GAUGES).forEach(g=>addGaugeRow(g.name, g.val));
     if(s.photos) s.photos.forEach((p,i)=>{ photos[i]={...photos[i],...p}; $('pz'+i).value=photos[i].zoom; });
     photoCount=s.photoCount||0;
     [...photoct.children].forEach(c=>c.setAttribute('aria-pressed', String(+c.dataset.n===photoCount)));
@@ -616,12 +588,15 @@
   function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state())); }catch(e){} }
   function restore(){ try{ apply(JSON.parse(localStorage.getItem(KEY)||'null')); }catch(e){} }
 
-  $('pngBtn').addEventListener('click',()=>{
+  function exportPNG(withEdge){
     if(typeof html2canvas!=='function'){ flash('이미지 기능을 불러오지 못했습니다'); return; }
     const el = mode==='card' ? $('cardView') : $('relView');
+    if(!withEdge) el.classList.add('no-edge');
     flash('저장 중…');
     html2canvas(el,{scale:3, backgroundColor:null, useCORS:true, logging:false}).then(cv=>{
-      const name = (mode==='card'?($('bName').value||'명함'):'관계시트')+'.png';
+      if(!withEdge) el.classList.remove('no-edge');
+      const base = mode==='card'?($('bName').value||'명함'):'관계시트';
+      const name = base+(withEdge?'':'_테두리없음')+'.png';
       cv.toBlob(blob=>{
         if(!blob){ flash('이미지 저장에 실패했습니다'); return; }
         const url=URL.createObjectURL(blob);
@@ -631,11 +606,13 @@
         setTimeout(()=>URL.revokeObjectURL(url), 4000);
         flash('저장했습니다');
       }, 'image/png');
-    }).catch(err=>{ console.error(err); flash('이미지 저장에 실패했습니다'); });
-  });
+    }).catch(err=>{ if(!withEdge) el.classList.remove('no-edge'); console.error(err); flash('이미지 저장에 실패했습니다'); });
+  }
+  $('pngEdge').addEventListener('click',()=>exportPNG(true));
+  $('pngNoEdge').addEventListener('click',()=>exportPNG(false));
 
   /* 초기화 */
-  DEFAULT_GAUGES.forEach(g=>addGaugeRow(g.name, g.val, g.glyph));
+  DEFAULT_GAUGES.forEach(g=>addGaugeRow(g.name, g.val));
   applyHex(); renderCard(); renderRel(); renderPhotos(); restore();
 })();
 </script>
