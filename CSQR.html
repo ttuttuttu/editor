@@ -15,7 +15,7 @@
     /* JS가 헥스 3색에서 자동 계산 (이미지 저장 호환) */
     --ink-40:rgba(43,43,43,.40); --ink-48:rgba(43,43,43,.48); --ink-55:rgba(43,43,43,.55);
     --ink-62:rgba(43,43,43,.62); --ink-75:rgba(43,43,43,.75);
-    --accent-tint:#f6eef0; --track-bg:#efe1e5; --accent-soft:rgba(140,74,90,.45);
+    --accent-tint:#f6eef0; --accent-soft:rgba(140,74,90,.45);
   }
   *{box-sizing:border-box}
   html{ -webkit-text-size-adjust:100%; }
@@ -28,16 +28,17 @@
 
   /* ── 상단 모드 전환 (중앙) ── */
   .topbar{
-    padding:18px 0 14px; display:flex; justify-content:center;
+    padding:18px 10px 14px; display:flex; justify-content:center;
     border-bottom:1px solid var(--line); background:var(--panel);
   }
   .modes{ display:flex; border:1px solid #2b2b2b; border-radius:22px; overflow:hidden; }
   .modes button{
-    font:inherit; font-size:13px; padding:8px 18px; cursor:pointer;
-    background:#fff; color:#2b2b2b; border:none;
+    font:inherit; font-size:12.5px; padding:8px 14px; cursor:pointer;
+    background:#fff; color:#2b2b2b; border:none; white-space:nowrap;
   }
   .modes button+button{ border-left:1px solid var(--line); }
   .modes button[aria-pressed="true"]{ background:#2b2b2b; color:#fff; }
+  @media (max-width:460px){ .modes button{ padding:8px 10px; font-size:11.5px; } }
 
   .work{ flex:1; display:grid; grid-template-columns:340px 1fr; }
   @media (max-width:880px){ .work{ grid-template-columns:1fr; } }
@@ -55,15 +56,16 @@
     border:1px solid var(--line); border-radius:7px;
     background:#fff; color:#2b2b2b; outline:none; width:100%;
   }
-  .fgroup input:focus, .fgroup textarea:focus{ border-color:#2b2b2b; }
   .fgroup textarea{ resize:vertical; min-height:56px; }
   .hint{ font-size:11px; color:#a09c95; }
   .sep{ border:none; border-top:1px dashed var(--line); margin:4px 0; }
+  input:focus, textarea:focus, select:focus{ border-color:#2b2b2b !important; outline:none; }
 
   /* 모바일 확대 튐 방지: 16px 미만 입력칸 포커스시 iOS가 화면을 확대함 */
   @media (max-width:880px){
     .fgroup input[type=text], .fgroup textarea,
     .row2 input, .row3 input, .row3 select,
+    .rowQ input, .rowQ textarea,
     .hexrow input[type=text]{ font-size:16px; }
   }
 
@@ -74,7 +76,6 @@
     font-family:monospace; font-size:13px; padding:7px 10px;
     border:1px solid var(--line); border-radius:7px; outline:none; width:100%;
   }
-  .hexrow input[type=text]:focus{ border-color:#2b2b2b; }
   .hexrow .sw{ width:30px; height:30px; border-radius:7px; border:1px solid var(--line); }
 
   /* 동적 행 공통 */
@@ -111,7 +112,6 @@
     padding:6px 14px; border-radius:16px;
     border:1px dashed #2b2b2b; background:transparent; color:#2b2b2b;
   }
-  input:focus, textarea:focus, select:focus{ border-color:#2b2b2b !important; }
 
   /* 사진 편집 */
   .photoedit{ display:flex; flex-direction:column; gap:8px; padding:10px; border:1px solid var(--line); border-radius:9px; background:#fff; }
@@ -180,7 +180,7 @@
   .qitem .qt{ font-size:14px; font-weight:500; }
   .qitem .qa2{ margin-top:5px; padding-left:26px; font-size:13.5px; line-height:1.75; color:var(--ink-75); white-space:pre-wrap; }
 
-  /* ══ 관계도 ══ */
+  /* ══ 관계도 (공통) ══ */
   .maptitle{ text-align:center; font-family:'Gowun Batang',serif; font-weight:700; font-size:22px; margin-bottom:4px; }
   .maparea{
     position:relative; width:100%; height:400px; margin-top:10px;
@@ -195,7 +195,7 @@
     position:absolute; transform:translate(-50%,-50%);
     font-size:10.5px; color:var(--accent); background:var(--card);
     padding:2px 8px; border-radius:10px; border:1px solid var(--accent);
-    pointer-events:none; white-space:nowrap; max-width:120px; overflow:hidden; text-overflow:ellipsis;
+    pointer-events:none; white-space:nowrap; max-width:130px; overflow:hidden; text-overflow:ellipsis;
   }
   .mnode{
     position:absolute; transform:translate(-50%,-50%);
@@ -233,7 +233,8 @@
     <div class="modes" role="tablist">
       <button id="mChar" aria-pressed="true">캐릭터 시트</button>
       <button id="mQa" aria-pressed="false">문답 카드</button>
-      <button id="mMap" aria-pressed="false">관계도</button>
+      <button id="mMap1" aria-pressed="false">관계도 · 쌍방</button>
+      <button id="mMap2" aria-pressed="false">관계도 · 일방</button>
     </div>
   </div>
 
@@ -289,21 +290,38 @@
         <div class="fgroup"><label>하단 표기</label><input type="text" id="qFoot" placeholder="예: Q&A CARD"></div>
       </div>
 
-      <!-- ── 관계도 폼 ── -->
-      <div id="formMap" class="hidden" style="flex-direction:column; gap:14px;">
-        <div class="fgroup"><label>제목</label><input type="text" id="mTitle" placeholder="관계도"></div>
+      <!-- ── 관계도 ① 쌍방 폼 ── -->
+      <div id="formMap1" class="hidden" style="flex-direction:column; gap:14px;">
+        <div class="fgroup"><label>제목</label><input type="text" id="mTitle1" placeholder="관계도"></div>
         <div class="fgroup">
           <label>인물</label>
-          <div class="rows" id="charRows"></div>
-          <button class="addrow" id="addChar">+ 인물 추가</button>
+          <div class="rows" id="charRows1"></div>
+          <button class="addrow" id="addChar1">+ 인물 추가</button>
         </div>
         <div class="fgroup">
-          <label>관계 (누가 → 누구, 어떤 사이)</label>
-          <div class="rows" id="relRows"></div>
-          <button class="addrow" id="addRel">+ 관계 추가</button>
-          <div class="hint">오른쪽 지도에서 이름표를 드래그해 배치를 바꿀 수 있어요</div>
+          <label>관계 (두 사람이 같은 마음)</label>
+          <div class="rows" id="relRows1"></div>
+          <button class="addrow" id="addRel1">+ 관계 추가</button>
+          <div class="hint">화살표 없는 일직선으로 이어져요 · 지도의 이름표는 드래그로 옮길 수 있어요</div>
         </div>
-        <button class="addrow" id="arrange">○ 동그랗게 재정렬</button>
+        <button class="addrow" id="arrange1">○ 동그랗게 재정렬</button>
+      </div>
+
+      <!-- ── 관계도 ② 일방 폼 ── -->
+      <div id="formMap2" class="hidden" style="flex-direction:column; gap:14px;">
+        <div class="fgroup"><label>제목</label><input type="text" id="mTitle2" placeholder="관계도"></div>
+        <div class="fgroup">
+          <label>인물</label>
+          <div class="rows" id="charRows2"></div>
+          <button class="addrow" id="addChar2">+ 인물 추가</button>
+        </div>
+        <div class="fgroup">
+          <label>관계 (왼쪽 인물 → 오른쪽 인물 방향)</label>
+          <div class="rows" id="relRows2"></div>
+          <button class="addrow" id="addRel2">+ 관계 추가</button>
+          <div class="hint">화살표로 방향이 표시돼요 · 서로 생각이 다르면 방향을 바꿔 하나 더 추가하세요 · 관계 글자끼리는 자동으로 자리를 피해요</div>
+        </div>
+        <button class="addrow" id="arrange2">○ 동그랗게 재정렬</button>
       </div>
 
     </div>
@@ -341,11 +359,18 @@
         <div class="footline" id="vQFoot"></div>
       </div>
 
-      <!-- 관계도 -->
-      <div class="card hidden" id="mapView">
+      <!-- 관계도 ① 쌍방 -->
+      <div class="card hidden" id="mapView1">
         <div class="eyebrow">RELATION MAP</div>
-        <div class="maptitle" id="vMTitle">관계도</div>
-        <div class="maparea" id="maparea"></div>
+        <div class="maptitle" id="vMTitle1">관계도</div>
+        <div class="maparea" id="maparea1"></div>
+      </div>
+
+      <!-- 관계도 ② 일방 -->
+      <div class="card hidden" id="mapView2">
+        <div class="eyebrow">RELATION MAP</div>
+        <div class="maptitle" id="vMTitle2">관계도</div>
+        <div class="maparea" id="maparea2"></div>
       </div>
 
       <div class="outbar">
@@ -400,7 +425,12 @@
 
   /* ══ 모드 ══ */
   let mode='char';
-  const MODES={ char:['mChar','formChar','charView'], qa:['mQa','formQa','qaView'], map:['mMap','formMap','mapView'] };
+  const MODES={
+    char:['mChar','formChar','charView'],
+    qa:['mQa','formQa','qaView'],
+    map1:['mMap1','formMap1','mapView1'],
+    map2:['mMap2','formMap2','mapView2'],
+  };
   function setMode(m){
     mode=m;
     Object.entries(MODES).forEach(([k,[btn,form,view]])=>{
@@ -409,15 +439,16 @@
       $(form).style.display = k===m ? 'flex' : '';
       $(view).classList.toggle('hidden', k!==m);
     });
-    if(m==='map') renderMap();
+    if(m==='map1') map1.render();
+    if(m==='map2') map2.render();
     save();
   }
   $('mChar').addEventListener('click',()=>setMode('char'));
   $('mQa').addEventListener('click',()=>setMode('qa'));
-  $('mMap').addEventListener('click',()=>setMode('map'));
+  $('mMap1').addEventListener('click',()=>setMode('map1'));
+  $('mMap2').addEventListener('click',()=>setMode('map2'));
 
   /* ═══════════ ① 캐릭터 시트 ═══════════ */
-  /* 사진 */
   const photo={data:null, zoom:100, x:50, y:50};
   function loadPhoto(file){
     const r=new FileReader();
@@ -467,7 +498,6 @@
     fr.addEventListener('pointercancel',()=>{ drag=null; });
   })();
 
-  /* 기본 정보 행 */
   const DEFAULT_INFO=[['나이',''],['생일',''],['키',''],['직업','']];
   const infoRows=$('infoRows');
   function addInfoRow(k='', v=''){
@@ -486,7 +516,6 @@
       return {k:k.value.trim(), v:v.value.trim()};
     }).filter(i=>i.k&&i.v);
   }
-
   function renderChar(){
     $('vCName').textContent=$('cName').value||'이름';
     const al=$('cAlias').value.trim();
@@ -546,170 +575,260 @@
   }
   ['qTitle','qSub','qFoot'].forEach(id=>$(id).addEventListener('input',()=>{ renderQa(); save(); }));
 
-  /* ═══════════ ③ 관계도 ═══════════ */
-  let chars=[];  // {id, name}
-  let rels=[];   // {a, b, label}
-  let pos={};    // id -> {x,y} (%)
-  let nextId=1;
+  /* ═══════════ ③④ 관계도 공장: 쌍방(map1) / 일방(map2) ═══════════ */
+  function createMap(sfx, directional){
+    const M={ chars:[], rels:[], pos:{}, nid:1 };
+    const charRowsEl=$('charRows'+sfx), relRowsEl=$('relRows'+sfx);
+    const areaEl=$('maparea'+sfx), titleEl=$('mTitle'+sfx), vTitleEl=$('vMTitle'+sfx);
 
-  const charRows=$('charRows'), relRows=$('relRows');
+    function charName(c,i){ return c.name.trim()||('인물 '+(i+1)); }
 
-  function addChar(name=''){
-    const c={id:'c'+(nextId++), name};
-    chars.push(c);
-    const row=document.createElement('div'); row.className='row2';
-    row.style.gridTemplateColumns='1fr 26px';
-    const nI=document.createElement('input'); nI.type='text'; nI.placeholder='홍길동'; nI.value=name;
-    nI.addEventListener('input',()=>{
-      c.name=nI.value;
-      refreshRelSelects();
-      renderMap(); save();
-    });
-    const del=document.createElement('button'); del.className='del'; del.textContent='×'; del.title='삭제';
-    del.addEventListener('click',()=>{
-      chars=chars.filter(x=>x.id!==c.id);
-      rels=rels.filter(r=>r.a!==c.id && r.b!==c.id);
-      delete pos[c.id];
-      row.remove(); rebuildRelRows(); renderMap(); save();
-    });
-    row.append(nI,del); charRows.appendChild(row);
-    refreshRelSelects();
-    return c;
-  }
-  $('addChar').addEventListener('click',()=>{ addChar(); renderMap(); save(); });
+    function refreshSelects(){
+      [...relRowsEl.querySelectorAll('select')].forEach(s=>{
+        const cur=s.value;
+        s.innerHTML='';
+        const o0=document.createElement('option'); o0.value=''; o0.textContent='— 선택 —';
+        s.appendChild(o0);
+        M.chars.forEach((c,i)=>{
+          const o=document.createElement('option');
+          o.value=c.id; o.textContent=charName(c,i);
+          s.appendChild(o);
+        });
+        s.value = M.chars.some(c=>c.id===cur) ? cur : '';
+      });
+    }
 
-  function charName(c,i){ return c.name.trim()||('인물 '+(i+1)); }
+    function addCharRow(c){
+      const row=document.createElement('div'); row.className='row2';
+      row.style.gridTemplateColumns='1fr 26px';
+      const nI=document.createElement('input'); nI.type='text'; nI.placeholder='홍길동'; nI.value=c.name;
+      nI.addEventListener('input',()=>{ c.name=nI.value; refreshSelects(); render(); save(); });
+      const del=document.createElement('button'); del.className='del'; del.textContent='×'; del.title='삭제';
+      del.addEventListener('click',()=>{
+        M.chars=M.chars.filter(x=>x.id!==c.id);
+        M.rels=M.rels.filter(r=>r.a!==c.id && r.b!==c.id);
+        delete M.pos[c.id];
+        row.remove(); rebuildRelRows(); render(); save();
+      });
+      row.append(nI,del); charRowsEl.appendChild(row);
+    }
+    function addChar(name=''){
+      const c={id:'c'+(M.nid++), name};
+      M.chars.push(c);
+      addCharRow(c);
+      refreshSelects();
+      return c;
+    }
 
-  function makeSelect(current){
-    const s=document.createElement('select');
-    const o0=document.createElement('option'); o0.value=''; o0.textContent='— 선택 —';
-    s.appendChild(o0);
-    chars.forEach((c,i)=>{
-      const o=document.createElement('option');
-      o.value=c.id; o.textContent=charName(c,i);
-      if(c.id===current) o.selected=true;
-      s.appendChild(o);
-    });
-    return s;
-  }
-  function refreshRelSelects(){
-    [...relRows.querySelectorAll('select')].forEach(s=>{
-      const cur=s.value;
-      s.innerHTML='';
+    function makeSelect(current){
+      const s=document.createElement('select');
       const o0=document.createElement('option'); o0.value=''; o0.textContent='— 선택 —';
       s.appendChild(o0);
-      chars.forEach((c,i)=>{
+      M.chars.forEach((c,i)=>{
         const o=document.createElement('option');
         o.value=c.id; o.textContent=charName(c,i);
+        if(c.id===current) o.selected=true;
         s.appendChild(o);
       });
-      s.value = chars.some(c=>c.id===cur) ? cur : '';
-    });
-  }
+      return s;
+    }
 
-  function addRel(a='', b='', label=''){
-    const r={a,b,label};
-    rels.push(r);
-    const row=document.createElement('div'); row.className='row3';
-    const sA=makeSelect(a), sB=makeSelect(b);
-    const lI=document.createElement('input'); lI.type='text'; lI.placeholder='관계 (예: 앙숙)'; lI.value=label;
-    const del=document.createElement('button'); del.className='del'; del.textContent='×'; del.title='삭제';
-    del.addEventListener('click',()=>{ rels=rels.filter(x=>x!==r); row.remove(); renderMap(); save(); });
-    sA.addEventListener('input',()=>{ r.a=sA.value; renderMap(); save(); });
-    sB.addEventListener('input',()=>{ r.b=sB.value; renderMap(); save(); });
-    lI.addEventListener('input',()=>{ r.label=lI.value; renderMap(); save(); });
-    row.append(sA,sB,lI,del);
-    relRows.appendChild(row);
-  }
-  $('addRel').addEventListener('click',()=>addRel());
+    function addRel(a='', b='', label=''){
+      const r={a,b,label};
+      M.rels.push(r);
+      const row=document.createElement('div'); row.className='row3';
+      const sA=makeSelect(a), sB=makeSelect(b);
+      const lI=document.createElement('input'); lI.type='text';
+      lI.placeholder = directional ? '어떻게 생각하나 (예: 은인)' : '어떤 사이 (예: 소꿉지기)';
+      lI.value=label;
+      const del=document.createElement('button'); del.className='del'; del.textContent='×'; del.title='삭제';
+      del.addEventListener('click',()=>{ M.rels=M.rels.filter(x=>x!==r); row.remove(); render(); save(); });
+      sA.addEventListener('input',()=>{ r.a=sA.value; render(); save(); });
+      sB.addEventListener('input',()=>{ r.b=sB.value; render(); save(); });
+      lI.addEventListener('input',()=>{ r.label=lI.value; render(); save(); });
+      row.append(sA,sB,lI,del);
+      relRowsEl.appendChild(row);
+    }
 
-  function rebuildRelRows(){
-    relRows.innerHTML='';
-    const old=rels; rels=[];
-    old.forEach(r=>addRel(r.a,r.b,r.label));
-  }
+    function rebuildRelRows(){
+      relRowsEl.innerHTML='';
+      const old=M.rels; M.rels=[];
+      old.forEach(r=>addRel(r.a,r.b,r.label));
+    }
 
-  /* 배치 */
-  function arrangeCircle(){
-    const n=chars.length;
-    chars.forEach((c,i)=>{
-      const ang=-Math.PI/2 + i*(2*Math.PI/Math.max(n,1));
-      pos[c.id]={ x:50+38*Math.cos(ang), y:50+38*Math.sin(ang) };
-    });
-  }
-  $('arrange').addEventListener('click',()=>{ arrangeCircle(); renderMap(); save(); });
-
-  const area=$('maparea');
-  function renderMap(){
-    $('vMTitle').textContent=$('mTitle').value||'관계도';
-    chars.forEach(c=>{ if(!pos[c.id]) arrangeCircle(); });
-    area.innerHTML='';
-    const W=area.clientWidth, H=area.clientHeight;
-    if(!W) return;
-    /* 선 + 라벨 */
-    rels.forEach(r=>{
-      if(!r.a||!r.b||r.a===r.b) return;
-      const pa=pos[r.a], pb=pos[r.b];
-      if(!pa||!pb) return;
-      const x1=pa.x/100*W, y1=pa.y/100*H, x2=pb.x/100*W, y2=pb.y/100*H;
-      const dx=x2-x1, dy=y2-y1;
-      const dist=Math.sqrt(dx*dx+dy*dy), ang=Math.atan2(dy,dx)*180/Math.PI;
-      const line=document.createElement('div'); line.className='mline';
-      line.style.left=x1+'px'; line.style.top=y1+'px';
-      line.style.width=dist+'px'; line.style.transform='rotate('+ang+'deg)';
-      area.appendChild(line);
-      if(r.label.trim()){
-        const lb=document.createElement('div'); lb.className='mlabel';
-        lb.style.left=(x1+x2)/2+'px'; lb.style.top=(y1+y2)/2+'px';
-        lb.textContent=r.label.trim();
-        area.appendChild(lb);
-      }
-    });
-    /* 노드 */
-    chars.forEach((c,i)=>{
-      const p=pos[c.id];
-      const nd=document.createElement('div'); nd.className='mnode';
-      nd.style.left=p.x+'%'; nd.style.top=p.y+'%';
-      nd.textContent=charName(c,i);
-      let drag=null;
-      nd.addEventListener('pointerdown',e=>{
-        drag={sx:e.clientX, sy:e.clientY, ox:p.x, oy:p.y};
-        nd.setPointerCapture(e.pointerId);
+    function arrangeCircle(){
+      const n=M.chars.length;
+      M.chars.forEach((c,i)=>{
+        const ang=-Math.PI/2 + i*(2*Math.PI/Math.max(n,1));
+        M.pos[c.id]={ x:50+38*Math.cos(ang), y:50+38*Math.sin(ang) };
       });
-      nd.addEventListener('pointermove',e=>{
-        if(!drag) return;
-        const rect=area.getBoundingClientRect();
-        p.x=Math.max(4,Math.min(96, drag.ox+(e.clientX-drag.sx)/rect.width*100));
-        p.y=Math.max(5,Math.min(95, drag.oy+(e.clientY-drag.sy)/rect.height*100));
-        renderMap();
+    }
+
+    function render(){
+      vTitleEl.textContent=titleEl.value||'관계도';
+      Object.keys(M.pos).forEach(k=>{ if(!M.chars.some(c=>c.id===k)) delete M.pos[k]; });
+      /* 위치 없는 새 인물에게만 자리 배정 */
+      M.chars.forEach((c,i)=>{
+        if(!M.pos[c.id]){
+          const ang=-Math.PI/2 + i*(2*Math.PI/Math.max(M.chars.length,1));
+          M.pos[c.id]={ x:50+38*Math.cos(ang), y:50+38*Math.sin(ang) };
+        }
       });
-      nd.addEventListener('pointerup',()=>{ drag=null; save(); });
-      nd.addEventListener('pointercancel',()=>{ drag=null; });
-      area.appendChild(nd);
-    });
+      areaEl.innerHTML='';
+      const lineLayer=document.createElement('div');
+      lineLayer.className='lineLayer';
+      lineLayer.style.cssText='position:absolute;inset:0;pointer-events:none;';
+      areaEl.appendChild(lineLayer);
+      M.chars.forEach((c,i)=>{
+        const p=M.pos[c.id];
+        const nd=document.createElement('div'); nd.className='mnode';
+        nd.style.left=p.x+'%'; nd.style.top=p.y+'%'; nd.style.zIndex=5;
+        nd.textContent=charName(c,i);
+        let drag=null;
+        nd.addEventListener('pointerdown',e=>{
+          e.preventDefault();
+          drag={sx:e.clientX, sy:e.clientY, ox:p.x, oy:p.y};
+          nd.setPointerCapture(e.pointerId);
+          nd.style.zIndex=9;
+        });
+        nd.addEventListener('pointermove',e=>{
+          if(!drag) return;
+          const rect=areaEl.getBoundingClientRect();
+          p.x=Math.max(3,Math.min(97, drag.ox+(e.clientX-drag.sx)/rect.width*100));
+          p.y=Math.max(4,Math.min(96, drag.oy+(e.clientY-drag.sy)/rect.height*100));
+          nd.style.left=p.x+'%'; nd.style.top=p.y+'%';
+          renderLines();
+        });
+        nd.addEventListener('pointerup',()=>{ drag=null; nd.style.zIndex=5; save(); });
+        nd.addEventListener('pointercancel',()=>{ drag=null; nd.style.zIndex=5; });
+        areaEl.appendChild(nd);
+      });
+      renderLines();
+    }
+
+    function renderLines(){
+      const layer=areaEl.querySelector('.lineLayer');
+      if(!layer) return;
+      layer.innerHTML='';
+      const W=areaEl.clientWidth, H=areaEl.clientHeight;
+      if(!W) return;
+      const placedLabels=[];   /* 관계 라벨 충돌 방지용 (일방 지도) */
+      M.rels.forEach(r=>{
+        if(!r.a||!r.b||r.a===r.b) return;
+        if(!M.chars.some(c=>c.id===r.a) || !M.chars.some(c=>c.id===r.b)) return;
+        const pa=M.pos[r.a], pb=M.pos[r.b];
+        if(!pa||!pb) return;
+        let x1=pa.x/100*W, y1=pa.y/100*H, x2=pb.x/100*W, y2=pb.y/100*H;
+        const dx=x2-x1, dy=y2-y1;
+        const dist=Math.sqrt(dx*dx+dy*dy);
+        if(dist<1) return;
+        const ang=Math.atan2(dy,dx)*180/Math.PI;
+        const ux=-dy/dist, uy=dx/dist;
+        /* 같은 두 사람을 잇는 관계가 여럿이면 서로 비껴 그리기 */
+        const samePair = M.rels.some(o=>o!==r && ((o.a===r.b&&o.b===r.a)||(o.a===r.a&&o.b===r.b)));
+        const off = samePair ? 9 : 0;
+        x1+=ux*off; y1+=uy*off; x2+=ux*off; y2+=uy*off;
+        /* 선 */
+        const line=document.createElement('div'); line.className='mline';
+        line.style.left=x1+'px'; line.style.top=y1+'px';
+        line.style.width=dist+'px'; line.style.transform='rotate('+ang+'deg)';
+        layer.appendChild(line);
+        /* 화살촉 (일방 지도만) */
+        if(directional){
+          const t=0.78;
+          const axp=x1+(x2-x1)*t, ayp=y1+(y2-y1)*t;
+          const ar=document.createElement('div');
+          ar.style.cssText='position:absolute;width:0;height:0;pointer-events:none;'+
+            'border-left:7px solid var(--accent);border-top:4.5px solid transparent;border-bottom:4.5px solid transparent;';
+          ar.style.left=axp+'px'; ar.style.top=ayp+'px';
+          ar.style.transform='translate(-50%,-50%) rotate('+ang+'deg)';
+          layer.appendChild(ar);
+        }
+        /* 관계 라벨 */
+        if(r.label.trim()){
+          const lb=document.createElement('div'); lb.className='mlabel';
+          lb.textContent=r.label.trim();
+          layer.appendChild(lb);
+          if(directional){
+            /* 라벨끼리 겹치지 않게: 선 위 여러 지점 + 띄우는 거리 후보를 시도 */
+            const w=lb.offsetWidth||42, h=lb.offsetHeight||18;
+            const base = samePair ? 13 : 11;
+            const cands=[];
+            [0,-0.14,0.14,-0.28,0.28].forEach(dt=>{
+              [base, base+15, base+30].forEach(lo=>cands.push({t:0.5+dt, lo}));
+            });
+            let done=false;
+            for(const cd of cands){
+              const cx=x1+(x2-x1)*cd.t + ux*cd.lo;
+              const cy=y1+(y2-y1)*cd.t + uy*cd.lo;
+              const rect={l:cx-w/2-2, t:cy-h/2-2, r:cx+w/2+2, b:cy+h/2+2};
+              const hit=placedLabels.some(p=>!(rect.r<p.l||rect.l>p.r||rect.b<p.t||rect.t>p.b));
+              if(!hit){
+                lb.style.left=cx+'px'; lb.style.top=cy+'px';
+                placedLabels.push(rect); done=true; break;
+              }
+            }
+            if(!done){
+              const cd=cands[cands.length-1];
+              const cx=x1+(x2-x1)*cd.t + ux*cd.lo, cy=y1+(y2-y1)*cd.t + uy*cd.lo;
+              lb.style.left=cx+'px'; lb.style.top=cy+'px';
+              placedLabels.push({l:cx-w/2, t:cy-h/2, r:cx+w/2, b:cy+h/2});
+            }
+          }else{
+            /* 쌍방 지도: 선 한가운데 (알약 배경이 선을 가려 깔끔) */
+            lb.style.left=(x1+x2)/2+'px'; lb.style.top=(y1+y2)/2+'px';
+          }
+        }
+      });
+    }
+
+    titleEl.addEventListener('input',()=>{ render(); save(); });
+    $('addChar'+sfx).addEventListener('click',()=>{ addChar(); render(); save(); });
+    $('addRel'+sfx).addEventListener('click',()=>addRel());
+    $('arrange'+sfx).addEventListener('click',()=>{ arrangeCircle(); render(); save(); });
+
+    return {
+      render,
+      serialize(){ return { title:titleEl.value, nid:M.nid,
+        chars:M.chars.map(c=>({...c})), rels:M.rels.map(r=>({...r})), pos:{...M.pos} }; },
+      load(d){
+        titleEl.value=(d&&d.title)||'';
+        charRowsEl.innerHTML=''; relRowsEl.innerHTML='';
+        M.chars=[]; M.rels=[]; M.pos=(d&&d.pos)||{}; M.nid=(d&&d.nid)||1;
+        ((d&&d.chars)||[]).forEach(c=>{ M.chars.push({...c}); addCharRow(M.chars[M.chars.length-1]); });
+        refreshSelects();
+        ((d&&d.rels)||[]).forEach(r=>addRel(r.a,r.b,r.label));
+      },
+      seed(){ addChar(); addChar(); addRel(); arrangeCircle(); },
+    };
   }
-  $('mTitle').addEventListener('input',()=>{ renderMap(); save(); });
-  window.addEventListener('resize',()=>{ if(mode==='map') renderMap(); });
+  const map1=createMap('1', false);   /* 쌍방: 일직선 */
+  const map2=createMap('2', true);    /* 일방: 화살표 + 라벨 충돌 회피 */
+
+  window.addEventListener('resize',()=>{
+    if(mode==='map1') map1.render();
+    if(mode==='map2') map2.render();
+  });
 
   /* ══ 저장/복원 ══ */
-  const KEY='trio.v1';
+  const KEY='trio.v2';
   function state(){
     return {
-      mode, nextId,
+      mode,
       hex:HEX.map(h=>$(h.inp).value),
       char:Object.fromEntries(['cName','cAlias','cLook','cPers','cStory','cQuote','cTags','cFoot'].map(id=>[id,$(id).value])),
       info:[...infoRows.children].map(r=>{ const [k,v]=r.querySelectorAll('input'); return [k.value,v.value]; }),
       photo:{...photo},
       qa:{ title:$('qTitle').value, sub:$('qSub').value, foot:$('qFoot').value,
            rows:[...qaRows.children].map(r=>[r.querySelector('input').value, r.querySelector('textarea').value]) },
-      map:{ title:$('mTitle').value, chars:chars.map(c=>({...c})), rels:rels.map(r=>({...r})), pos:{...pos} },
+      map1:map1.serialize(),
+      map2:map2.serialize(),
     };
   }
   function apply(s){
     if(!s) return;
     if(s.hex) HEX.forEach((h,i)=>{ if(s.hex[i]) $(h.inp).value=s.hex[i]; });
     applyHex();
-    if(s.nextId) nextId=s.nextId;
     if(s.char) Object.entries(s.char).forEach(([k,v])=>{ if($(k)) $(k).value=v; });
     infoRows.innerHTML='';
     (s.info&&s.info.length? s.info : DEFAULT_INFO).forEach(([k,v])=>addInfoRow(k,v));
@@ -720,47 +839,53 @@
       qaRows.innerHTML='';
       (s.qa.rows&&s.qa.rows.length? s.qa.rows : DEFAULT_QA).forEach(([q,a])=>addQaRow(q,a));
     }
-    if(s.map){
-      $('mTitle').value=s.map.title||'';
-      charRows.innerHTML=''; relRows.innerHTML='';
-      chars=[]; rels=[]; pos=s.map.pos||{};
-      (s.map.chars||[]).forEach(c=>{ const nc=addChar(c.name); nc.id=c.id; refreshRelSelects(); });
-      /* addChar가 새 id를 만들었으니 원래 id로 되돌림 → 행 재구성 */
-      chars=(s.map.chars||[]).map(c=>({...c}));
-      charRows.innerHTML='';
-      chars.forEach(c=>{
-        const row=document.createElement('div'); row.className='row2';
-        row.style.gridTemplateColumns='1fr 26px';
-        const nI=document.createElement('input'); nI.type='text'; nI.placeholder='홍길동'; nI.value=c.name;
-        nI.addEventListener('input',()=>{ c.name=nI.value; refreshRelSelects(); renderMap(); save(); });
-        const del=document.createElement('button'); del.className='del'; del.textContent='×'; del.title='삭제';
-        del.addEventListener('click',()=>{
-          chars=chars.filter(x=>x.id!==c.id);
-          rels=rels.filter(r=>r.a!==c.id && r.b!==c.id);
-          delete pos[c.id];
-          row.remove(); rebuildRelRows(); renderMap(); save();
-        });
-        row.append(nI,del); charRows.appendChild(row);
-      });
-      (s.map.rels||[]).forEach(r=>addRel(r.a,r.b,r.label));
-      refreshRelSelects();
-    }
+    map1.load(s.map1);
+    map2.load(s.map2);
+    if(!(s.map1&&s.map1.chars&&s.map1.chars.length)) map1.seed();
+    if(!(s.map2&&s.map2.chars&&s.map2.chars.length)) map2.seed();
     renderPhoto(); renderChar(); renderQa();
-    setMode(s.mode||'char');
+    const m = (s.mode==='map') ? 'map2' : (s.mode||'char');   /* 예전 단일 관계도 모드였다면 일방으로 */
+    setMode(MODES[m]? m : 'char');
+  }
+  /* 예전 버전(trio.v1) 데이터 승계: 쌍방 관계는 ①로, 일방 관계는 ②로 */
+  function migrateV1(){
+    try{
+      const old=JSON.parse(localStorage.getItem('trio.v1')||'null');
+      if(!old) return null;
+      const s={...old};
+      if(old.map){
+        const mk=(rels)=>({ title:old.map.title||'', nid:old.map.nid||99,
+          chars:(old.map.chars||[]).map(c=>({...c})), rels, pos:{...(old.map.pos||{})} });
+        s.map1=mk((old.map.rels||[]).filter(r=>r.mutual).map(r=>({a:r.a,b:r.b,label:r.label})));
+        s.map2=mk((old.map.rels||[]).filter(r=>!r.mutual).map(r=>({a:r.a,b:r.b,label:r.label})));
+      }
+      return s;
+    }catch(e){ return null; }
   }
   function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state())); }catch(e){} }
-  function restore(){ try{ apply(JSON.parse(localStorage.getItem(KEY)||'null')); return !!localStorage.getItem(KEY); }catch(e){ return false; } }
+  function restore(){
+    try{
+      let s=JSON.parse(localStorage.getItem(KEY)||'null');
+      if(!s) s=migrateV1();
+      if(!s) return false;
+      apply(s); return true;
+    }catch(e){ return false; }
+  }
 
   /* ══ PNG 저장 (테두리 포함 / 없음) ══ */
   function exportPNG(withEdge){
     if(typeof html2canvas!=='function'){ flash('이미지 기능을 불러오지 못했습니다'); return; }
-    const el = mode==='char' ? $('charView') : mode==='qa' ? $('qaView') : $('mapView');
+    const el = mode==='char' ? $('charView')
+             : mode==='qa' ? $('qaView')
+             : mode==='map1' ? $('mapView1') : $('mapView2');
     if(!withEdge) el.classList.add('no-edge');
     flash('저장 중…');
     html2canvas(el,{scale:3, backgroundColor:null, useCORS:true, logging:false}).then(cv=>{
       if(!withEdge) el.classList.remove('no-edge');
       const base = mode==='char' ? ($('cName').value||'캐릭터시트')
-                 : mode==='qa' ? ($('qTitle').value||'문답카드') : ($('mTitle').value||'관계도');
+                 : mode==='qa' ? ($('qTitle').value||'문답카드')
+                 : mode==='map1' ? ($('mTitle1').value||'관계도_쌍방')
+                 : ($('mTitle2').value||'관계도_일방');
       const name = base+(withEdge?'':'_테두리없음')+'.png';
       cv.toBlob(blob=>{
         if(!blob){ flash('이미지 저장에 실패했습니다'); return; }
@@ -781,9 +906,7 @@
   if(!restore()){
     DEFAULT_INFO.forEach(([k,v])=>addInfoRow(k,v));
     DEFAULT_QA.forEach(([q,a])=>addQaRow(q,a));
-    addChar(); addChar();   /* 빈 인물 2칸 (자리표시: 홍길동) */
-    addRel();
-    arrangeCircle();
+    map1.seed(); map2.seed();
     renderPhoto(); renderChar(); renderQa();
     setMode('char');
   }
