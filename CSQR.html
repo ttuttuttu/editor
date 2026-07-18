@@ -159,8 +159,12 @@
   .pframe{
     flex:none; width:104px; height:104px; border-radius:50%;
     border:1.5px solid var(--accent); background-color:var(--accent-tint);
-    background-repeat:no-repeat; overflow:hidden;
+    position:relative; overflow:hidden;
     cursor:grab; touch-action:none;
+  }
+  .pframe img{
+    position:absolute; display:block;
+    pointer-events:none; -webkit-user-drag:none; user-select:none;
   }
   .pframe:active{ cursor:grabbing; }
   .cid .cname{ font-family:'Gowun Batang',serif; font-weight:700; font-size:27px; line-height:1.25; }
@@ -498,18 +502,27 @@
   function renderPhoto(){
     const fr=$('fr0');
     fr.classList.toggle('hidden', !photo.data);
-    if(photo.data){
-      fr.style.backgroundImage='url('+photo.data+')';
-      fr.style.backgroundSize=photo.zoom+'%';
-      fr.style.backgroundPosition=photo.x+'% '+photo.y+'%';
+    let im=fr.querySelector('img');
+    if(!photo.data){ if(im) im.remove(); return; }
+    if(!photo.ar){   /* 가로세로 비율을 아직 모르면 먼저 읽고 다시 그림 */
+      const probe=new Image();
+      probe.onload=()=>{ photo.ar=probe.naturalHeight/probe.naturalWidth; renderPhoto(); };
+      probe.src=photo.data;
+      return;
     }
+    if(!im){ im=document.createElement('img'); im.draggable=false; fr.appendChild(im); }
+    if(im.getAttribute('src')!==photo.data) im.src=photo.data;
+    /* background-size/position과 같은 배치: 확대(폭 %) + x/y 정렬 */
+    im.style.width=photo.zoom+'%';
+    im.style.left=((100-photo.zoom)*photo.x/100)+'%';
+    im.style.top=((100-photo.zoom*photo.ar)*photo.y/100)+'%';
   }
   $('addPhotoBtn').addEventListener('click',()=>$('pf0').click());
   $('pu0').addEventListener('click',()=>$('pf0').click());
   $('pf0').addEventListener('change',e=>{
     const f=e.target.files[0]; if(!f) return;
     readImage(f, data=>{
-      photo.data=data;
+      photo.data=data; photo.ar=null;
       photo.zoom=100; photo.x=50; photo.y=50; $('pz0').value=100;
       renderPhoto(); syncPhotoUI(); save();
     });
