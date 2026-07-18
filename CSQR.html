@@ -271,11 +271,11 @@
       <!-- ── 캐릭터 시트 폼 ── -->
       <div id="formChar" style="display:flex; flex-direction:column; gap:14px;">
         <div class="fgroup">
-          <label>사진 (선택)</label>
-          <div class="photoedit">
-            <div class="pbtns"><button id="pu0">사진 올리기</button><button id="px0">지우기</button></div>
+          <button class="addrow" id="addPhotoBtn">+ 사진 넣기 (선택)</button>
+          <div class="photoedit hidden" id="pe0">
+            <div class="pbtns"><button id="pu0">사진 바꾸기</button><button id="px0">지우기</button></div>
             <div class="prow"><span>확대</span><input type="range" id="pz0" min="100" max="300" value="100"></div>
-            <div class="hint">사진을 드래그하면 위치를 옮길 수 있어요 · 안 올리면 칸이 사라져요</div>
+            <div class="hint">사진을 드래그하면 위치를 옮길 수 있어요</div>
           </div>
           <input type="file" id="pf0" accept="image/*" class="hidden">
         </div>
@@ -294,8 +294,9 @@
             <button data-l="1" aria-pressed="false">한 줄 + 사진</button>
           </div>
         </div>
+        <button class="addrow hidden" id="addPhoto2Btn">+ 옆 사진 넣기 (선택)</button>
         <div class="photoedit hidden" id="peInfo">
-          <div class="pbtns"><button id="pu1">옆 사진 올리기</button><button id="px1">지우기</button></div>
+          <div class="pbtns"><button id="pu1">사진 바꾸기</button><button id="px1">지우기</button></div>
           <div class="prow"><span>확대</span><input type="range" id="pz1" min="100" max="300" value="100"></div>
           <div class="hint">기본 정보 옆에 세로 사진이 들어가요 · 드래그로 위치 조절</div>
         </div>
@@ -498,7 +499,7 @@
         cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
         target.data=cv.toDataURL('image/jpeg',0.88);
         target.zoom=100; target.x=50; target.y=50; $(zoomInputId).value=100;
-        renderPhoto(); renderChar(); save();
+        renderPhoto(); renderChar(); syncPhotoUI(); save();
       };
       img.src=r.result;
     };
@@ -522,21 +523,31 @@
     fr.addEventListener('pointercancel',()=>{ drag=null; });
   }
 
+  /* 사진 UI: 없으면 '+ 넣기' 버튼만, 있으면 편집칸 */
+  function syncPhotoUI(){
+    $('addPhotoBtn').classList.toggle('hidden', !!photo.data);
+    $('pe0').classList.toggle('hidden', !photo.data);
+    const oneCol = infoLayout==='1';
+    $('addPhoto2Btn').classList.toggle('hidden', !oneCol || !!photo2.data);
+    $('peInfo').classList.toggle('hidden', !oneCol || !photo2.data);
+  }
+  $('addPhotoBtn').addEventListener('click',()=>$('pf0').click());
+  $('addPhoto2Btn').addEventListener('click',()=>$('pf1').click());
   $('pu0').addEventListener('click',()=>$('pf0').click());
   $('pf0').addEventListener('change',e=>{ const f=e.target.files[0]; if(f) loadImageTo(photo,'pz0',f); e.target.value=''; });
-  $('px0').addEventListener('click',()=>{ photo.data=null; renderPhoto(); save(); });
+  $('px0').addEventListener('click',()=>{ photo.data=null; renderPhoto(); syncPhotoUI(); save(); });
   $('pz0').addEventListener('input',e=>{ photo.zoom=+e.target.value; renderPhoto(); save(); });
 
   $('pu1').addEventListener('click',()=>$('pf1').click());
   $('pf1').addEventListener('change',e=>{ const f=e.target.files[0]; if(f) loadImageTo(photo2,'pz1',f); e.target.value=''; });
-  $('px1').addEventListener('click',()=>{ photo2.data=null; renderChar(); save(); });
+  $('px1').addEventListener('click',()=>{ photo2.data=null; renderChar(); syncPhotoUI(); save(); });
   $('pz1').addEventListener('input',e=>{ photo2.zoom=+e.target.value; renderChar(); save(); });
 
   /* 배치 토글 */
   const ilayct=$('ilayct');
   function applyInfoLayout(){
     [...ilayct.children].forEach(b=>b.setAttribute('aria-pressed', String(b.dataset.l===infoLayout)));
-    $('peInfo').classList.toggle('hidden', infoLayout!=='1');
+    syncPhotoUI();
   }
   [...ilayct.children].forEach(b=>{
     b.addEventListener('click',()=>{ infoLayout=b.dataset.l; applyInfoLayout(); renderChar(); save(); });
@@ -979,6 +990,7 @@
     DEFAULT_INFO.forEach(([k,v])=>addInfoRow(k,v));
     DEFAULT_QA.forEach(([q,a])=>addQaRow(q,a));
     map1.seed(); map2.seed();
+    applyInfoLayout();
     renderPhoto(); renderChar(); renderQa();
     setMode('char');
   }
